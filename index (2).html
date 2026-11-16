@@ -1,0 +1,1220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>AXIS 3D</title>
+<style>
+:root{--bg:#0b0c0e;--panel:#16181c;--panel2:#1f2228;--line:#2a2e35;--text:#e6e8eb;--muted:#8a9099;--acc:#f0a030;--acc2:#ffcf7a;--good:#4cc38a;--bad:#e5534b;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+.wrap{max-width:980px;margin:0 auto;padding:10px 12px 48px}
+header{display:flex;justify-content:space-between;align-items:baseline;padding:6px 2px 12px}
+h1{font-size:22px;margin:0;font-weight:600}h1 span{color:var(--acc);font-weight:400}
+.tag{font-size:12px;color:var(--muted);letter-spacing:.4px;margin-top:2px}
+.sub{color:var(--muted);font-style:italic;font-size:13px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;margin:0 0 12px;overflow:hidden}
+.ph{padding:10px 12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+summary.ph{cursor:pointer;list-style:none;flex-wrap:nowrap}summary.ph::-webkit-details-marker{display:none}
+summary.ph::after{content:"Show ▾";color:var(--muted);font-size:14px;white-space:nowrap;margin-left:auto}
+details[open]>summary.ph::after{content:"Hide ▴"}
+details[open]>summary.ph{border-bottom:1px solid var(--line)}
+.cap{font-family:var(--mono);letter-spacing:3px;font-size:12px;color:var(--muted);text-transform:uppercase;white-space:nowrap}
+.sumtxt{color:var(--text);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.mono{font-family:var(--mono)}.muted{color:var(--muted)}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{background:transparent;color:var(--text);border:0;border-right:1px solid var(--line);padding:7px 12px;font-size:14px}
+.seg button:last-child{border-right:0}.seg button.on{background:var(--panel2);color:var(--acc)}
+button{cursor:pointer;font:inherit}
+.tog{background:transparent;border:1px solid var(--line);color:var(--text);border-radius:6px;padding:6px 10px;font-size:14px}
+.tog.on{border-color:var(--acc);color:var(--acc)}
+.bar2{padding-top:0}
+/* stage */
+.stage{position:relative;width:100%;max-width:min(100%,80vh);aspect-ratio:1/1;margin:0 auto;background:#000;touch-action:none;user-select:none;-webkit-user-select:none;overflow:hidden}
+.view{position:absolute;overflow:hidden;background:#0d0f12}
+.view.big{inset:0;z-index:1}
+.view.small{right:8px;bottom:50px;width:36%;aspect-ratio:1/1;z-index:5;border:1px solid #5a606a;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,.6)}
+.view canvas{display:block;width:100%;height:100%}
+#gl3d{position:absolute;inset:0}#gl3d canvas{width:100%!important;height:100%!important}
+#lab3d{position:absolute;inset:0;pointer-events:none}
+.view.small #lab3d{display:none}
+.vcap{position:absolute;top:4px;left:6px;font:600 10px var(--mono);color:#ddd;text-shadow:0 0 3px #000;pointer-events:none;display:none}
+.view.small .vcap{display:block}
+.ov{position:absolute;z-index:6;font-family:var(--mono);color:#f4f4f4;text-shadow:0 0 3px #000,0 0 2px #000;font-weight:700;pointer-events:none;font-size:clamp(13px,3.6vw,18px)}
+.ov.tl{top:8px;left:10px}.ov.tr{top:8px;right:10px;text-align:right}
+.ov.bl{bottom:10px;left:10px;font-size:12px;font-weight:600;max-width:58%}
+.ov .sm{font-size:12px;opacity:.9}
+.edge{position:absolute;z-index:4;font:700 13px var(--mono);color:#ffcf7a;text-shadow:0 0 3px #000;pointer-events:none}
+.e-l{left:6px;top:50%;transform:translateY(-50%)}.e-r{right:6px;top:50%;transform:translateY(-50%)}
+.e-t{top:6px;left:50%;transform:translateX(-50%)}.e-b{bottom:6px;left:50%;transform:translateX(-50%)}
+.stBtn{position:absolute;z-index:8;right:8px;bottom:8px;background:rgba(12,14,18,.8);color:#e6e8eb;border:1px solid #5a606a;border-radius:6px;padding:6px 10px;font-size:13px}
+body.noinset .view.small{display:none}
+.fsLeg{position:absolute;z-index:6;left:10px;top:36px;background:rgba(10,12,15,.75);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:11px var(--mono);color:var(--muted);pointer-events:none;width:150px;display:none}
+.fsLeg .g{height:6px;border-radius:3px;margin:4px 0;background:linear-gradient(90deg,#709ee0,#d9dee6 30%,#f2c94c 55%,#f08a30 78%,#d9302b)}
+.fsLeg .lr{display:flex;justify-content:space-between}
+.nogl[hidden]{display:none}
+.nogl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:var(--muted);font-size:14px}
+.ecg{padding:8px 12px 0}
+#ecg{display:block;width:100%;height:70px;background:#050807;border:1px solid #1d2a22;border-radius:6px}
+.ecgc{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.ecgc input{flex:1;min-width:110px;height:28px}
+.sndbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.sndbar input[type=range]{flex:1;min-width:80px;height:28px}
+.chk{font-size:14px;display:flex;gap:4px;align-items:center;white-space:nowrap}.chk input{accent-color:var(--acc)}
+.sndBtn.sndMain{background:var(--acc);color:#111;border:0;border-radius:6px;padding:8px 12px;font-weight:600}
+.sndBtn.sndMain.on{background:#244a33;color:#bff5d4;border:1px solid #4cc38a}
+.sndBtn.mini{position:absolute;z-index:8;right:10px;top:62px;width:38px;height:38px;border-radius:50%;border:1px solid #5a606a;background:rgba(12,14,18,.75);color:#fff;font-size:17px;padding:0}
+.sndBtn.mini.on{border-color:#4cc38a}
+.tunHost{position:relative;width:100%;aspect-ratio:1/1;max-height:80vh;background:#120103;touch-action:none;overflow:hidden}
+.tunHost canvas{display:block;width:100%!important;height:100%!important}
+#tunLab{position:absolute;inset:0;pointer-events:none;z-index:2}
+.tunHost .ov{z-index:6}
+.hint{font-size:12px;color:var(--muted);text-align:center;padding:6px 10px 10px}
+.selbar{margin:0 12px 12px;padding:10px;border:1px solid var(--acc);border-radius:8px;background:#221c12;font-size:14px}
+.selbar b{color:var(--acc)}
+.scard{font-size:14px;line-height:1.5}.scard .sh{display:flex;justify-content:space-between;gap:8px;font-size:16px}.scard b{color:var(--acc)}
+#segCard{padding:10px 2px 10px;border-bottom:1px solid var(--line);margin-bottom:6px}
+small.syn{display:block;font-size:10px;color:var(--muted);line-height:1}
+.selbar .row{margin-top:6px}
+.act{background:var(--acc);color:#111;border:0;border-radius:6px;padding:7px 12px;font-weight:600}
+/* controls */
+.ctl{padding:4px 14px 14px}
+.lab{display:flex;gap:10px;align-items:baseline;margin-top:8px}
+.hintm{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.big{font-family:var(--mono);font-size:28px;margin:2px 0 2px}
+input[type=range]{width:100%;accent-color:var(--acc);height:34px;margin:0}
+.scale{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 12px 12px}
+@media(max-width:420px){.grid3{grid-template-columns:repeat(2,1fr)}}
+.pre{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:6px;padding:8px 10px;text-align:left}
+.pre b{display:block;font-weight:500;font-size:15px}.pre small{font-family:var(--mono);color:var(--muted);font-size:12px}
+.pre.on{border-color:var(--acc);background:#2a2214}.pre.on b{color:var(--acc)}
+.sub2{padding:10px 12px 4px}
+/* info */
+.info{padding:12px 14px 14px}
+.info h3{margin:0 0 6px;font-size:18px;font-weight:600}
+.info p{margin:6px 0}
+.lnk{color:var(--text);text-decoration:underline;text-decoration-color:#666;cursor:pointer;background:none;border:0;padding:0}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:14px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.kv .k{color:var(--muted);font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:4px 12px}
+.chip{background:none;border:0;color:var(--text);font:14px var(--mono);padding:0;cursor:pointer;white-space:nowrap}
+.chip i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:1px}
+.chip span{color:var(--muted);font-size:12px}
+.fine{font-size:12px;color:var(--muted);margin-top:10px}
+/* pad */
+#pad{display:block;width:100%;touch-action:none}
+.padwrap{padding:8px 10px 10px}
+/* table */
+.tbl{padding:4px 12px 12px}
+table{width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed}
+td{padding:7px 3px;border-top:1px solid var(--line);vertical-align:middle;white-space:nowrap}
+tr.r{cursor:pointer}tr.r.sel td{background:#2a2214}tr.r.sel td.id{color:var(--acc)}
+td.dot i{display:inline-block;width:10px;height:10px;border-radius:50%}
+td.id{font-family:var(--mono);width:52px}
+td.nm{color:var(--muted);overflow:hidden;text-overflow:ellipsis}
+td.dot{width:18px}td.bc{width:18%}
+td.p{font-family:var(--mono);text-align:right;width:42px}
+td.olap{font-family:var(--mono);text-align:right;color:var(--muted);font-size:12px;width:78px}
+.barc{height:6px;background:#2a2e35;border-radius:3px;overflow:hidden;min-width:44px}
+.barc span{display:block;height:100%;background:#cfd3d9}
+/* room */
+#roomHost{position:relative;width:100%;aspect-ratio:16/11;touch-action:none;background:#0b0e13}
+#roomHost canvas{display:block;width:100%!important;height:100%!important}
+.rcap{position:absolute;top:8px;left:10px;font:700 13px var(--mono);color:#eee;text-shadow:0 0 3px #000;pointer-events:none}
+/* quiz */
+.qbody{padding:10px 12px 14px}
+.qq{font-size:16px;margin:8px 0}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.opt{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:6px;padding:10px;text-align:left}
+.opt.right{border-color:var(--good);color:var(--good)}.opt.wrong{border-color:var(--bad);color:var(--bad)}
+.fb{margin-top:10px;padding:10px;border-radius:6px;background:var(--panel2);font-size:14px}
+.fb.ok{border-left:3px solid var(--good)}.fb.no{border-left:3px solid var(--bad)}
+.kc{padding:0 14px 12px}.kc summary{cursor:pointer;padding:10px 0;color:var(--acc2)}
+.kc ul{margin:4px 0 8px;padding-left:20px}.kc li{margin:4px 0}
+body.masked .maskable{filter:blur(9px);pointer-events:none;user-select:none}
+body.masked .edge,body.masked #ovAng,body.masked #ovView,body.masked .view.small,body.masked .fsLeg{visibility:hidden}
+.foot{text-align:center;color:var(--muted);font-size:12px;margin-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><div><h1>AXIS <span>3D</span></h1><div class="tag">Angiographic X-ray Intravascular Simulator</div></div><span class="sub">For educational purposes</span></header>
+
+<section class="panel">
+  <div class="ph">
+    <div class="seg" id="artSeg"><button data-a="L" class="on">Left</button><button data-a="R">Right</button><button data-a="B">Both</button></div>
+    <div class="seg" id="colSeg"><button data-c="artery" class="on">Artery</button><button data-c="fore">Foreshortening</button></div>
+  </div>
+  <div class="ph bar2"><div class="row">
+    <button class="tog on" id="tDet">Detector view</button>
+    <button class="tog on" id="tLabels">Labels</button>
+    <button class="tog" id="tPlanes">Planes</button>
+    <button class="tog on" id="tSkel">Skeleton</button>
+    <button class="tog on" id="tSee">See-through</button>
+    <button class="tog" id="tTint">Tint angio</button>
+    <button class="tog on" id="tCine">Cine</button>
+    <button class="tog" id="tReset">Reset zoom</button>
+  </div></div>
+  <div class="stage" id="stage">
+    <div class="view big" id="v3d"><div id="gl3d"></div><canvas id="lab3d"></canvas><div class="nogl" id="nogl" hidden>The 3D heart needs an internet connection the first time the page opens (it loads Three.js). The angiogram still works offline.</div><div class="vcap">3D</div></div>
+    <button class="stBtn" id="insetBtn">Hide angiogram</button>
+    <div class="view small" id="vAng"><canvas id="angio"></canvas><div class="vcap" id="angCap">ANGIO</div></div>
+    <div class="ov tl" id="ovAng"></div>
+    <div class="ov tr"><div id="ovArt">LCA</div><div class="sm" id="ovCine">CINE</div></div>
+    <div class="ov bl" id="ovView"></div>
+    <div class="fsLeg" id="fsLeg">FORESHORTENING<div class="g"></div><div class="lr"><span>in plane</span><span>end-on</span></div></div>
+    <button class="sndBtn mini" title="Sound on / mute">&#128263;</button>
+    <div class="edge e-l" id="eL"></div><div class="edge e-r" id="eR"></div><div class="edge e-t" id="eT"></div><div class="edge e-b" id="eB"></div>
+  </div>
+  <div class="ecg">
+    <div class="sndbar" style="margin-top:0">
+      <button class="sndBtn sndMain" title="Sound on / mute">&#128263; Muted: tap for flow sound</button>
+      <span class="hintm">Vol</span><input type="range" id="vol" min="0" max="1" step="0.05" value="0.8" aria-label="Volume">
+      <label class="chk"><input type="checkbox" id="cFlow" checked> Flow whoosh</label>
+    </div>
+    <div class="fine sndStat" style="margin:2px 0 0"></div>
+    <div class="fine" id="sndNote" style="margin:4px 0 0">The whoosh is coronary blood flow, pulsing with each beat. In the left coronary it surges in diastole, because the contracting muscle squeezes the arteries in systole; RCA flow is steadier.</div>
+  </div>
+  <div class="hint" id="stageHint">Drag to orientate the heart (moves the C-arm) · pinch to zoom · tap a vessel to analyse it · tap the inset to swap views</div>
+  <div class="selbar" id="selbar" hidden></div>
+</section>
+
+<details class="panel" id="tunP">
+  <summary class="ph"><span class="cap">Inside the artery</span><span class="sumtxt muted">fly-through: RCA · LM · LAD · LCx</span></summary>
+  <div class="ph"><div class="seg" id="tunSeg"><button data-t="RCA" class="on">RCA</button><button data-t="LM">LM</button><button data-t="LAD">LAD</button><button data-t="LCx">LCx</button></div></div>
+  <div class="tunHost" id="tunHost"><canvas id="tunLab"></canvas>
+    <div class="ov tl" id="tunTL"></div><div class="ov tr" id="tunTR"></div><div class="ov bl" id="tunBL" style="max-width:75%"></div>
+    <button class="sndBtn mini" title="Sound on / mute">&#128263;</button>
+    <div class="nogl" id="tunNo" hidden>The fly-through needs Three.js (internet on first load).</div>
+  </div>
+  <div class="ph"><div class="row">
+    <button class="tog on" id="tunPlay">Pause</button>
+    <button class="tog" id="tunSten">Show a stenosis</button>
+    <button class="tog" id="tunRestart">Restart</button></div>
+    <div class="row" style="flex:1;min-width:150px"><span class="hintm">Speed</span><input type="range" id="tunSpd" min="2" max="20" step="1" value="6" style="flex:1"></div>
+  </div>
+  <div class="ph" style="padding-top:0"><input type="range" id="tunPos" min="0" max="1000" value="0" style="flex:1" aria-label="Position along the artery"></div>
+  <div class="fine" style="padding:0 12px 12px" id="tunNote"></div>
+</details>
+
+<details class="panel" id="quizP">
+  <summary class="ph"><span class="cap">Quiz</span><span id="score" class="sumtxt mono muted" style="text-align:right">Score 0 / 0</span></summary>
+  <div class="qbody" style="padding-top:0">
+    <div class="row"><button class="tog" id="qName">Name that view</button><button class="tog" id="qShot">Get the shot</button><button class="tog" id="qStop" style="display:none">End quiz</button></div>
+    <div id="qBody" class="muted" style="margin-top:8px;font-size:14px">Name that view: identify a projection from the angiogram alone. Get the shot: orientate the heart to the best view for a clinical target.</div>
+  </div>
+</details>
+
+<details class="panel maskable" open>
+  <summary class="ph"><span class="cap">Controls</span><span class="sumtxt mono" id="ctlSum"></span></summary>
+  <div class="ctl">
+    <div class="lab"><span class="cap">Rotation</span><span class="hintm">RAO / LAO</span></div>
+    <div class="big" id="rotTxt"></div>
+    <input type="range" id="rot" min="-90" max="90" step="1" aria-label="Rotation">
+    <div class="scale"><span>RAO 90</span><span>0</span><span>LAO 90</span></div>
+    <div class="lab" style="margin-top:12px"><span class="cap">Angulation</span><span class="hintm">CAU / CRA</span></div>
+    <div class="big" id="angTxt"></div>
+    <input type="range" id="ang" min="-45" max="45" step="1" aria-label="Angulation">
+    <div class="scale"><span>CAU 45</span><span>0</span><span>CRA 45</span></div>
+  </div>
+  <div id="presetP"></div>
+</details>
+
+<details class="panel maskable" open>
+  <summary class="ph"><span class="cap">Current view</span><span class="sumtxt" id="cvSum"></span></summary>
+  <div class="info" id="info"></div>
+</details>
+
+<details class="panel maskable" open>
+  <summary class="ph"><span class="cap">Angle pad</span><span class="sumtxt mono" id="padTxt" style="text-align:right"></span></summary>
+  <div class="padwrap"><canvas id="pad"></canvas>
+    <div class="row" style="margin-top:8px"><div class="seg" id="mapSeg"><button data-m="clear" class="on">Clear</button><button data-m="fore">Foreshortening</button><button data-m="over">Overlap</button></div></div>
+    <div class="fine" id="padNote"></div></div>
+</details>
+
+<details class="panel maskable" open>
+  <summary class="ph"><span class="cap">Segments</span><span class="sumtxt" id="segSum"></span></summary>
+  <div class="tbl">
+    <div id="segCard" hidden></div>
+    <p class="fine" style="margin:6px 0 8px">Foreshortening (bar, %) and overlap (% · with which segment) at this angle. Tap a row, or a vessel on either image, to highlight it and map its clearest view on the pad.</p>
+    <table id="segT"></table>
+  </div>
+</details>
+
+<details class="panel maskable" open>
+  <summary class="ph"><span class="cap">Room view</span><span class="sumtxt muted">drag to move the C-arm</span></summary>
+  <div id="roomHost"><div class="rcap" id="roomCap"></div></div>
+</details>
+
+<details class="panel">
+  <summary class="ph"><span class="cap">Dominance</span><span class="sumtxt" id="domSum"></span></summary>
+  <div class="ph">
+    <div class="seg" id="domSeg"><button data-d="R" class="on">Right</button><button data-d="L">Left</button><button data-d="C">Co</button></div>
+    <button class="tog" id="tRamus">Ramus intermedius</button>
+  </div>
+</details>
+
+<details class="panel">
+  <summary class="ph"><span class="cap">Key concepts</span></summary>
+  <div class="kc">
+  <details open><summary>Naming a projection</summary><ul>
+    <li>Views are named by where the <b>detector (image intensifier)</b> sits. The X-ray tube is directly opposite, under the table.</li>
+    <li><b>RAO / LAO</b>: the C-arm rotates around the patient's long axis toward their right or left shoulder.</li>
+    <li><b>Cranial / caudal</b>: the detector tilts toward the head or the feet.</li>
+    <li>Image convention: the patient's left is on the right of the screen. The orange edge letters (L R A P H F) show which body direction each image edge faces.</li>
+  </ul></details>
+  <details><summary>Orientating an unknown image</summary><ul>
+    <li><b>Spine</b>: projects on the image left in RAO and on the image right in LAO.</li>
+    <li><b>Catheter</b>: in LAO the catheter and spine are on the same side; in RAO the catheter curves away across the heart.</li>
+    <li><b>Diaphragm</b>: rises into the lower field in cranial views; falls away in caudal views.</li>
+    <li><b>LAD vs LCx</b>: the LAD runs to the apex and gives septals; the LCx hugs the AV groove and gives OMs to the lateral wall.</li>
+  </ul></details>
+  <details><summary>The two cardiac planes</summary><ul>
+    <li><b>AV plane</b> (teal, turn on Planes): the AV groove carrying the RCA and LCx. In LAO it is seen nearly en face, so the RCA and LCx make a ring; in RAO it is edge-on, so they run as a line.</li>
+    <li><b>Interventricular (IV) plane</b> (violet): the septum carrying the LAD and PDA. In RAO it faces you; in LAO it is on profile, splitting left-sided from right-sided branches.</li>
+    <li>The Current view panel tells you how each plane is seen at the angle you are on.</li>
+  </ul></details>
+  <details><summary>Foreshortening and overlap</summary><ul>
+    <li>A segment pointing toward the beam looks short (end-on) and can hide a stenosis. Switch the colour to <b>Foreshortening</b> to see this on the 3D vessels: red is end-on, blue-white is lying flat in the image.</li>
+    <li>Each segment is clearest in views perpendicular to it. Tap a segment to see the band of good angles on the pad. The best view also avoids overlap with other branches.</li>
+    <li>Always image a lesion in at least two near-orthogonal views.</li>
+  </ul></details>
+  <details><summary>Classic view → structure</summary><ul>
+    <li>Distal LM / LAD–LCx bifurcation → LAO caudal ("spider"), AP caudal</li>
+    <li>LCx and OMs → RAO caudal</li>
+    <li>Mid LAD and diagonals → AP cranial, LAO cranial, RAO cranial</li>
+    <li>Mid–distal LAD / LIMA anastomosis → left lateral</li>
+    <li>Proximal–mid RCA ("C") → LAO; PDA length ("L") → RAO; crux → AP or LAO cranial</li>
+  </ul></details>
+  </div>
+</details>
+
+<div class="foot">Schematic model for learning angiographic projections — not anatomically exact and not for clinical decision-making.</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const D2R=Math.PI/180,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const S={det:true,planes:false,inset:true,padMap:'clear',orb:{r:-40,a:20},hr:70,sound:false,art:'L',rot:-15,ang:-30,dom:'R',ramus:false,labels:true,col:'artery',tint:false,skel:true,see:true,cine:true,zoom:1,big:'3d',sel:null,tw:null};
+let masked=false,dirty=true,roomDirty=true;
+const invalidate=()=>{dirty=true;roomDirty=true};
+
+/* ---------- vector math (patient frame: x = left, y = anterior, z = head; cm) ---------- */
+const add=(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]];
+const sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]];
+const sc=(a,s)=>[a[0]*s,a[1]*s,a[2]*s];
+const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+const norm=a=>{const l=Math.hypot(a[0],a[1],a[2]);return sc(a,1/l)};
+const lerp3=(a,b,f)=>[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f,a[2]+(b[2]-a[2])*f];
+
+const B=[-0.5,-0.5,2.5],H=8.5;
+const W=norm([5.5,3.5,-6]);                       // base -> apex
+const U=norm(sub([0,1,0],sc(W,dot([0,1,0],W))));  // anterior wall
+const V=cross(W,U);                               // obtuse (left) margin
+function rad(t){t=clamp(t,0,1.02);return 0.6+3.7*Math.sqrt(Math.max(0,1-Math.pow(t,2.2)))}
+function surf(t,th,k){const a=th*D2R,r=rad(t)*(k==null?1:k);return add(add(B,sc(W,t*H)),add(sc(U,Math.cos(a)*r),sc(V,Math.sin(a)*r)))}
+function meshR(t){if(t<0)return rad(0)*0.95*Math.sqrt(Math.max(0,1-Math.pow(t/0.26,2)));
+  if(t>1)return 0.57*Math.sqrt(Math.max(0,1-Math.pow((t-1)/0.12,2)));return rad(t)*0.95}
+const C0=add(B,sc(W,H*0.47));
+const LOST=add(add(add(B,sc(U,1.6)),sc(V,1.2)),sc(W,-0.3));
+const ROST=add(add(add(B,sc(U,2.2)),sc(V,-0.9)),sc(W,-0.3));
+const AO=add(add(add(B,sc(U,1.4)),sc(V,-0.1)),sc(W,-0.9));
+const SPAN=20.3;   // cm across the field at zoom 1 (matches the 3D camera)
+
+function catmull(P,n){
+  if(P.length<2)return P.map(p=>p.slice());
+  const out=[],dim=P[0].length;
+  for(let i=0;i<P.length-1;i++){
+    const p0=P[Math.max(i-1,0)],p1=P[i],p2=P[i+1],p3=P[Math.min(i+2,P.length-1)];
+    for(let s=0;s<n;s++){const t=s/n,t2=t*t,t3=t2*t,q=[];
+      for(let d=0;d<dim;d++)q.push(0.5*(2*p1[d]+(-p0[d]+p2[d])*t+(2*p0[d]-5*p1[d]+4*p2[d]-p3[d])*t2+(-p0[d]+3*p1[d]-3*p2[d]+p3[d])*t3));
+      out.push(q);}
+  }
+  out.push(P[P.length-1].slice());return out;
+}
+
+/* ---------- coronary tree: control points are (t along long axis, angle around it, radius factor) ---------- */
+function defs(dom,ramus){
+  const L=[
+    {id:'LM',name:'Left main',g:'LM',w:4.4,o:LOST,c:[[0.03,52],[0.06,47]]},
+    {id:'pLAD',name:'Proximal LAD',g:'LAD',w:3.7,from:'LM',c:[[0.13,43],[0.23,40]]},
+    {id:'mLAD',name:'Mid LAD',g:'LAD',w:3.1,from:'pLAD',c:[[0.4,36],[0.6,31]]},
+    {id:'aLAD',name:'Apical LAD',g:'LAD',w:2.4,from:'mLAD',c:[[0.78,27],[0.93,22],[1.0,70],[0.96,160]]},
+    {id:'D1',name:'First diagonal',g:'D',w:2.3,from:'pLAD',at:1,c:[[0.31,58],[0.46,74],[0.63,88]]},
+    {id:'D2',name:'Second diagonal',g:'D',w:1.9,from:'mLAD',at:0.5,c:[[0.55,50],[0.69,64],[0.83,75]]},
+    {id:'S1',name:'First septal',g:'S',w:1.3,from:'pLAD',at:0.7,c:[[0.26,36,0.85],[0.34,39,0.66],[0.44,42,0.5]]},
+    {id:'S2',name:'Second septal',g:'S',w:1.1,from:'mLAD',at:0.3,c:[[0.41,32,0.85],[0.5,35,0.68],[0.6,38,0.52]]},
+    {id:'S3',name:'Third septal',g:'S',w:1.0,from:'mLAD',at:0.8,c:[[0.56,27,0.85],[0.65,30,0.68],[0.74,33,0.55]]},
+    {id:'S4',name:'Fourth septal',g:'S',w:0.9,from:'aLAD',at:0.18,c:[[0.72,23,0.85],[0.8,26,0.7]]},
+    {id:'pLCx',name:'Proximal LCx',g:'LCx',w:3.3,from:'LM',c:[[0.06,72],[0.08,96]]},
+    {id:'OM1',name:'First obtuse marginal',g:'OM',w:2.2,from:'pLCx',at:1,c:[[0.22,102],[0.42,108],[0.63,114]]}
+  ];
+  if(dom==='R'){
+    L.push({id:'dLCx',name:'Distal LCx',g:'LCx',w:2.3,from:'pLCx',c:[[0.1,122],[0.12,142],[0.17,158]]});
+  }else if(dom==='L'){
+    L.push({id:'dLCx',name:'Distal LCx',g:'LCx',w:3.0,from:'pLCx',c:[[0.1,125],[0.1,160],[0.1,196]]});
+    L.push({id:'PDA',name:'Posterior descending',g:'PDA',w:2.1,from:'dLCx',c:[[0.22,198],[0.45,196],[0.7,193],[0.88,189]]});
+    L.push({id:'PL1',name:'First posterolateral',g:'PL',w:1.8,from:'dLCx',at:0.55,c:[[0.22,170],[0.4,166],[0.56,163]]});
+    L.push({id:'PL2',name:'Second posterolateral',g:'PL',w:1.6,from:'dLCx',at:0.8,c:[[0.22,184],[0.4,181],[0.55,178]]});
+    L.push({id:'AVN',name:'AV nodal artery',g:'AVN',w:1.0,from:'dLCx',c:[[0.07,200,0.85],[0.04,204,0.7]]});
+  }else{
+    L.push({id:'dLCx',name:'Distal LCx',g:'LCx',w:2.7,from:'pLCx',c:[[0.1,125],[0.1,158],[0.11,178]]});
+    L.push({id:'PL1',name:'First posterolateral',g:'PL',w:1.8,from:'dLCx',at:0.7,c:[[0.22,168],[0.42,164],[0.58,161]]});
+    L.push({id:'PL2',name:'Second posterolateral',g:'PL',w:1.6,from:'dLCx',c:[[0.22,182],[0.4,180],[0.55,178]]});
+  }
+  L.push({id:'OM2',name:'Second obtuse marginal',g:'OM',w:1.9,from:'dLCx',at:0.4,c:[[0.3,134],[0.5,138],[0.7,140]]});
+  if(ramus)L.push({id:'RI',name:'Ramus intermedius',g:'RI',w:2.4,from:'LM',c:[[0.18,64],[0.38,74],[0.6,82]]});
+
+  const R=[
+    {id:'pRCA',name:'Proximal RCA',g:'RCA',w:3.7,o:ROST,c:[[0.04,-15],[0.05,-40],[0.07,-62]]},
+    {id:'CB',name:'Conus branch',g:'RB',w:1.1,from:'pRCA',at:0.15,c:[[0.05,-5,1.08],[0.09,8,1.08],[0.14,18,1.04]]},
+    {id:'SAN',name:'Sinoatrial nodal artery',g:'RB',w:1.0,from:'pRCA',at:0.35,c:[[-0.04,-55,1.05],[-0.13,-75,1.0],[-0.2,-100,0.9]]},
+    {id:'RV1',name:'Right ventricular branch',g:'RB',w:1.4,from:'pRCA',at:0.85,c:[[0.16,-55],[0.32,-45],[0.48,-36]]}
+  ];
+  if(dom==='L'){
+    R.push({id:'mRCA',name:'Mid RCA (small)',g:'RCA',w:2.4,from:'pRCA',c:[[0.08,-92],[0.1,-115]]});
+    R.push({id:'AM',name:'Acute marginal',g:'RB',w:1.6,from:'mRCA',at:0.6,c:[[0.3,-104],[0.5,-108],[0.7,-106]]});
+  }else{
+    R.push({id:'mRCA',name:'Mid RCA',g:'RCA',w:3.4,from:'pRCA',c:[[0.08,-95],[0.09,-122]]});
+    R.push({id:'RV2',name:'Right ventricular branch 2',g:'RB',w:1.3,from:'mRCA',at:0.2,c:[[0.24,-82],[0.42,-74],[0.58,-66]]});
+    R.push({id:'AM',name:'Acute marginal',g:'RB',w:1.7,from:'mRCA',at:0.65,c:[[0.3,-108],[0.5,-112],[0.7,-110]]});
+    R.push({id:'dRCA',name:'Distal RCA',g:'RCA',w:3.0,from:'mRCA',c:[[0.1,-145],[0.1,-163]]});
+    R.push({id:'PDA',name:'Posterior descending',g:'PDA',w:2.1,from:'dRCA',c:[[0.2,-165],[0.45,-168],[0.7,-172],[0.88,-176]]});
+    R.push({id:'AVN',name:'AV nodal artery',g:'AVN',w:1.0,from:'dRCA',c:[[0.07,-168,0.85],[0.04,-172,0.7]]});
+    if(dom==='R'){
+      R.push({id:'PL1',name:'First posterolateral',g:'PL',w:2.0,from:'dRCA',c:[[0.11,-180],[0.14,-195],[0.26,-203],[0.42,-208]]});
+      R.push({id:'PL2',name:'Second posterolateral',g:'PL',w:1.6,from:'PL1',at:0.35,c:[[0.2,-202],[0.32,-214],[0.46,-219]]});
+    }
+  }
+  return {L,R};
+}
+const SHOWLAB=new Set(['LM','pLAD','pLCx','pRCA','D1','D2','OM1','OM2','S1','PDA','PL1','AM','RI','CB','RV1']);
+const LABTXT={pLAD:'LAD',pLCx:'LCx',pRCA:'RCA'};
+
+let VES=[];
+function build(){
+  const d=defs(S.dom,S.ramus);VES=[];
+  for(const [side,list] of [['L',d.L],['R',d.R]]){
+    const map={};
+    for(const v of list){
+      const ctrl=v.c.map(p=>[p[0],p[1],p[2]==null?1:p[2]]);
+      if(v.from){const P=map[v.from];const i=v.at==null?P.par.length-1:Math.round(v.at*(P.par.length-1));ctrl.unshift(P.par[i].slice())}
+      const par=catmull(ctrl,10);
+      const pts=(v.o?[v.o]:[]).concat(par.map(q=>surf(q[0],q[1],q[2])));
+      let len=0;for(let k=1;k<pts.length;k++)len+=Math.hypot(...sub(pts[k],pts[k-1]));
+      const o=Object.assign({},v,{side,par,pts,len,fs:0,ov:0,ovWith:null});
+      map[v.id]=o;VES.push(o);
+    }
+  }
+  // cumulative distance from ostium, used for the contrast-filling animation
+  const byId={};VES.forEach(v=>byId[v.id]=v);
+  for(const v of VES){let d0=0;if(v.from){const p=byId[v.from];const i=v.at==null?p.par.length-1:Math.round(v.at*(p.par.length-1));d0=p.dist[i+(p.o?1:0)]}
+    v.dist=[d0];for(let k=1;k<v.pts.length;k++)v.dist.push(v.dist[k-1]+Math.hypot(...sub(v.pts[k],v.pts[k-1])));}
+  S.maxD={L:0,R:0};for(const v of VES)S.maxD[v.side]=Math.max(S.maxD[v.side],v.dist[v.dist.length-1]);
+  if(S.sel&&!VES.find(v=>v.id===S.sel))S.sel=null;
+  best=null;
+}
+const visSides=()=>S.art==='B'?['L','R']:[S.art];
+const visVes=()=>VES.filter(v=>visSides().includes(v.side));
+function cathPts(ost){return catmull([ost,add(lerp3(ost,AO,0.3),[0,0,1.3]),add(AO,[0,0,4]),add(AO,[0.6,-1.5,6.3]),add(AO,[2,-4.8,6.4]),add(AO,[2.6,-6,3]),add(AO,[2.6,-6.3,-12])],8)}
+const CATH={L:cathPts(LOST),R:cathPts(ROST)};
+
+/* ---------- colours ---------- */
+const GC={LM:'#f2c94c',LAD:'#f26b3a',D:'#f59a76',S:'#f7c3a0',LCx:'#3d8ef0',OM:'#86b8f7',RI:'#b48cf0',RCA:'#22b07d',RB:'#72dcb4',PDA:'#9cc9ff',PL:'#6fa6f2',AVN:'#86b8f7'};
+const GCR={PDA:'#3fcf9a',PL:'#8fe6c4',AVN:'#8fe6c4'};
+const colOf=v=>(v.side==='R'&&GCR[v.g])||GC[v.g];
+const hexRGB=h=>[1,3,5].map(i=>parseInt(h.substr(i,2),16)/255);
+const FST=[[0,[0.44,0.62,0.88]],[0.3,[0.85,0.87,0.9]],[0.55,[0.95,0.79,0.3]],[0.78,[0.94,0.54,0.19]],[1,[0.85,0.19,0.17]]];
+function foreRGB(f){f=clamp(f,0,1);for(let i=1;i<FST.length;i++)if(f<=FST[i][0]){const a=FST[i-1],b=FST[i],k=(f-a[0])/(b[0]-a[0]);return [0,1,2].map(c=>a[1][c]+(b[1][c]-a[1][c])*k)}return FST[4][1]}
+const css=c=>`rgb(${c.map(x=>Math.round(x*255)).join(',')})`;
+
+/* ---------- views ---------- */
+const PRESETS={
+ L:[
+  {id:'spider',n:'Spider (LAO caudal)',sh:'Spider',r:45,a:-35,best:'Distal LM, LAD/LCx bifurcation, ostial and proximal LCx.',tip:'You are looking up the long axis of the LV, so the LAD is heavily foreshortened. The go-to view for distal LM disease.'},
+  {id:'raocaud',n:'RAO caudal',sh:'RAO caud',r:-15,a:-30,best:'LM, proximal LAD, LCx and obtuse marginals.',tip:'Best overall LCx/OM view: the LAD runs across the top toward the apex while the LCx and OMs fall inferiorly.',la:'l'},
+  {id:'apcaud',n:'AP caudal',sh:'AP caud',r:0,a:-30,best:'Distal LM and the origins of the LAD and LCx.',tip:'Useful alternative to the spider when the LM bifurcation overlaps.'},
+  {id:'apcran',n:'AP cranial',sh:'AP cran',r:0,a:40,best:'Mid and distal LAD, diagonal origins, septals.',tip:'Diaphragm can creep into the lower field, so ask for a deep breath in.'},
+  {id:'raocran',n:'RAO cranial',sh:'RAO cran',r:-30,a:30,best:'Mid–distal LAD; separates septals from diagonals.',tip:'Proximal LAD/LM often overlapped here.',la:'l'},
+  {id:'laocran',n:'LAO cranial',sh:'LAO cran',r:40,a:35,best:'Mid LAD and LAD/diagonal bifurcations: diagonals and septals split to either side of the LAD.',tip:'Orthogonal partner to RAO cranial for the LAD.'},
+  {id:'lat',n:'Left lateral',sh:'Lat',r:90,a:0,best:'Mid–distal LAD in full length; LIMA–LAD anastomosis.',tip:'The spine sits posteriorly (image right); the LAD runs down the anterior border.',la:'l'},
+  {id:'ap',n:'AP',sh:'AP',r:0,a:0,best:'Overview; LM ostium.',tip:'Lots of overlap, rarely diagnostic on its own.'}
+ ],
+ R:[
+  {id:'rlao',n:'LAO (RCA)',sh:'LAO',r:45,a:0,best:'Ostial, proximal and mid RCA: the classic "C" shape; acute marginals.',tip:'PDA and PL branches are foreshortened toward the crux.'},
+  {id:'rrao',n:'RAO (RCA)',sh:'RAO',r:-30,a:0,best:'Mid RCA and the length of the PDA: the "L" shape.',tip:'The proximal RCA is foreshortened in this view.',la:'l'},
+  {id:'rapcran',n:'AP cranial (RCA)',sh:'AP cran',r:0,a:30,best:'Distal RCA, crux and the PDA/PL bifurcation.',tip:'Cranial tilt opens the crux.'},
+  {id:'rlaocran',n:'LAO cranial (RCA)',sh:'LAO cran',r:40,a:25,best:'Crux, PDA and PL origins.',tip:'Partner to AP cranial for the distal RCA.'},
+  {id:'rap',n:'AP (RCA)',sh:'AP',r:0,a:0,best:'Overview of the RCA.',tip:'Mostly a scout view.'}
+ ]
+};
+const TASKS=[
+ {q:'Show the distal LM and open up the LAD/LCx bifurcation (ostial LCx).',art:'L',ok:['spider','apcaud']},
+ {q:'Lay out the LCx and obtuse marginals with minimal overlap.',art:'L',ok:['raocaud']},
+ {q:'Separate the diagonals from the mid LAD.',art:'L',ok:['apcran','laocran','raocran']},
+ {q:'Show the mid–distal LAD in full length for a LIMA graft check.',art:'L',ok:['lat','raocran']},
+ {q:'Show the proximal and mid RCA ("C" shape).',art:'R',ok:['rlao']},
+ {q:'Open up the crux to see the PDA/PL bifurcation.',art:'R',ok:['rapcran','rlaocran']},
+ {q:'Show the length of the PDA.',art:'R',ok:['rrao']}
+];
+const ALLP=PRESETS.L.map(p=>Object.assign({side:'L'},p)).concat(PRESETS.R.map(p=>Object.assign({side:'R'},p)));
+const findP=id=>ALLP.find(p=>p.id===id);
+
+function frame(rot,ang){const a=rot*D2R,b=ang*D2R;
+  const d=[Math.sin(a)*Math.cos(b),Math.cos(a)*Math.cos(b),Math.sin(b)];
+  const r=norm(cross(d,[0,0,1]));const u=cross(r,d);return {d,r,u};}
+const fmtR=r=>{r=Math.round(r);return r<0?'RAO '+(-r):r>0?'LAO '+r:'AP 0'};
+const fmtA=a=>{a=Math.round(a);return a<0?'CAU '+(-a):a>0?'CRA '+a:'0'};
+const fmtV=(r,a)=>fmtR(r)+(Math.round(a)?' '+fmtA(a):'');
+function nearestList(){
+  return ALLP.filter(p=>visSides().includes(p.side)).map(p=>({p,d:Math.hypot(p.r-S.rot,p.a-S.ang)})).sort((a,b)=>a.d-b.d);
+}
+function orient(v){const n=[['L','R'],['A','P'],['H','F']],a=v.map(Math.abs),ix=[0,1,2].sort((i,j)=>a[j]-a[i]);
+  let s=n[ix[0]][v[ix[0]]>=0?0:1];if(a[ix[1]]>0.38)s+=n[ix[1]][v[ix[1]]>=0?0:1];return s}
+
+/* ---------- analysis: foreshortening + overlap ---------- */
+function fsOf(v,F){let pl=0,tl=0;for(let k=1;k<v.pts.length;k++){const dd=sub(v.pts[k],v.pts[k-1]);tl+=Math.hypot(dd[0],dd[1],dd[2]);pl+=Math.hypot(dot(dd,F.r),dot(dd,F.u))}return tl?1-pl/tl:0}
+function projectAll(F,list){const m=new Map();
+  for(const v of list){let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;const P=v.pts.map(p=>{const q=sub(p,C0),x=dot(q,F.r),y=dot(q,F.u);if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;return [x,y]});m.set(v,{P,bb:[x0,y0,x1,y1]})}
+  return m}
+const THR=0.3;
+function overlapOf(v,proj){const a=proj.get(v),tally={};let hit=0,n=0;
+  for(let i=v.o?1:0;i<v.pts.length;i+=2){n++;const p=a.P[i];let got=null;
+    for(const [w,b] of proj){if(w===v||w.from===v.id||v.from===w.id)continue;
+      if(p[0]<b.bb[0]-THR||p[0]>b.bb[2]+THR||p[1]<b.bb[1]-THR||p[1]>b.bb[3]+THR)continue;
+      for(let k=0;k<b.P.length;k++){const q=b.P[k],dx=q[0]-p[0],dy=q[1]-p[1];
+        if(dx*dx+dy*dy<THR*THR){const e=sub(w.pts[k],v.pts[i]);if(e[0]*e[0]+e[1]*e[1]+e[2]*e[2]>1.44){got=w;break}}}
+      if(got)break}
+    if(got){hit++;tally[got.id]=(tally[got.id]||0)+1}}
+  let bw=null,bc=0;for(const k in tally)if(tally[k]>bc){bc=tally[k];bw=k}
+  return {ov:n?hit/n:0,with:bw}}
+function stats(){const F=frame(S.rot,S.ang),list=visVes(),proj=projectAll(F,list);
+  for(const v of list){v.fs=fsOf(v,F);const o=overlapOf(v,proj);v.ov=o.ov;v.ovWith=o.with}}
+let best=null; // {id,key,grid,r,a,fs,ov}
+function bestFor(v){
+  const key=v.id+S.art+S.dom+S.ramus;if(best&&best.key===key)return best;
+  const n=37*19,fs=new Float32Array(n),ov=new Float32Array(n),cl=new Float32Array(n),list=visVes();let bs=1e9,bb=null;
+  for(let i=0;i<37;i++)for(let j=0;j<19;j++){const r=-90+i*5,a=-45+j*5,F=frame(r,a),k=i*19+j,f=fsOf(v,F),o=overlapOf(v,projectAll(F,list));
+    fs[k]=f;ov[k]=o.ov;cl[k]=clamp(1-(f*1.15+o.ov*0.9),0,1);
+    const sc=f+o.ov*0.8+(Math.abs(r)>60?0.03:0)+(Math.abs(a)>40?0.02:0);if(sc<bs){bs=sc;bb={r,a,fs:f,ov:o.ov,with:o.with}}}
+  best=Object.assign({key,id:v.id,fsG:fs,ovG:ov,clG:cl},bb);return best}
+
+/* ---------- 2D angiogram ---------- */
+function blob(){const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');
+  const g=x.createRadialGradient(64,64,0,64,64,64);g.addColorStop(0,'rgba(0,0,0,1)');g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(0,0,128,128);return c}
+const BLOB=blob();
+const NOISE=(()=>{const c=document.createElement('canvas');c.width=c.height=160;const x=c.getContext('2d');const im=x.createImageData(160,160);
+  for(let i=0;i<im.data.length;i+=4){const v=Math.random()*255;im.data[i]=im.data[i+1]=im.data[i+2]=v;im.data[i+3]=255}x.putImageData(im,0,0);return c})();
+const cv=$('#angio'),ctx=cv.getContext('2d');let noisePat=null;
+function proj2D(w){const F=frame(S.rot,S.ang),s=w/SPAN*S.zoom,cx=w/2,cy=w/2;
+  return (p,m)=>{const q=sub(p,C0);return [cx+dot(q,F.r)*s*m,cy-dot(q,F.u)*s*m]}}
+function render2D(cine){
+  const dpr=Math.min(window.devicePixelRatio||1,2),cw=Math.max(60,Math.round(cv.clientWidth*dpr));if(cv.width!==cw){cv.width=cv.height=cw}
+  const w=cw,s=w/SPAN*S.zoom,P=proj2D(w),m=cine.m,F=frame(S.rot,S.ang);
+  const g=ctx.createRadialGradient(w/2,w/2,w*0.05,w/2,w/2,w*0.75);g.addColorStop(0,'#b9b9b9');g.addColorStop(1,'#727272');
+  ctx.fillStyle=g;ctx.fillRect(0,0,w,w);
+  ctx.globalAlpha=0.32;{const q=P([-1,-0.5,-15],1),r=10.5*s;ctx.drawImage(BLOB,q[0]-r,q[1]-r,2*r,2*r)}
+  const a1=P([0,-8,16],1),a2=P([0,-8,-16],1);ctx.lineCap='butt';ctx.globalAlpha=1;
+  ctx.strokeStyle='rgba(30,30,30,0.10)';ctx.lineWidth=4.2*s;ctx.beginPath();ctx.moveTo(a1[0],a1[1]);ctx.lineTo(a2[0],a2[1]);ctx.stroke();
+  ctx.strokeStyle='rgba(30,30,30,0.07)';ctx.lineWidth=2.6*s;ctx.stroke();
+  ctx.globalAlpha=0.06;
+  for(let tt=0.08;tt<=0.95;tt+=0.12)for(let th=0;th<360;th+=40){const q=P(surf(tt,th,0.55),m),r=rad(tt)*0.95*s;ctx.drawImage(BLOB,q[0]-r,q[1]-r,2*r,2*r)}
+  ctx.globalAlpha=1;
+  ctx.lineJoin='round';ctx.lineCap='round';ctx.strokeStyle='rgba(35,35,38,0.55)';ctx.lineWidth=Math.max(2,0.2*s);
+  for(const side of visSides()){ctx.beginPath();CATH[side].forEach((p,i)=>{const q=P(p,1);i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])});ctx.stroke()}
+  for(const side of visSides()){const q=P(side==='R'?ROST:LOST,m),r=1.1*s;ctx.globalAlpha=(cine.fill<1?0.5:0.28)*cine.fade;ctx.drawImage(BLOB,q[0]-r,q[1]-r,2*r,2*r)}
+  ctx.globalAlpha=1;
+  const vis=visVes();
+  const draw=(v,style,extra,alpha)=>{const front=cine.fill*S.maxD[v.side]*1.02;if(v.dist[0]>front)return;
+    ctx.lineWidth=Math.max(1.4,v.w*0.09*s)+extra;
+    const pieces=S.tint&&S.col==='fore'&&!extra;
+    if(!pieces){ctx.strokeStyle=style;ctx.globalAlpha=alpha;ctx.beginPath()}
+    let prev=null;
+    for(let i=0;i<v.pts.length;i++){const d=v.dist[i];let p3=v.pts[i],stop=false;
+      if(d>front){const f=(front-v.dist[i-1])/(d-v.dist[i-1]);p3=lerp3(v.pts[i-1],v.pts[i],f);stop=true}
+      const q=P(p3,m);
+      if(pieces){if(prev){const dd=norm(sub(v.pts[i],v.pts[i-1]));ctx.strokeStyle=css(foreRGB(Math.abs(dot(dd,F.d))));ctx.globalAlpha=alpha;ctx.beginPath();ctx.moveTo(prev[0],prev[1]);ctx.lineTo(q[0],q[1]);ctx.stroke()}}
+      else i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]);
+      prev=q;if(stop)break}
+    if(!pieces)ctx.stroke()};
+  const selV=S.sel&&vis.find(v=>v.id===S.sel);
+  if(selV)draw(selV,'rgba(240,160,48,0.95)',5*(w/600),0.9*cine.fade);
+  for(const v of vis){const dim=selV&&v!==selV?0.55:1;
+    draw(v,S.tint?colOf(v):'rgb(18,18,22)',0,(S.tint?0.95:0.8)*cine.fade*dim)}
+  ctx.globalAlpha=1;
+  noisePat=noisePat||ctx.createPattern(NOISE,'repeat');
+  ctx.save();ctx.globalAlpha=0.13;ctx.globalCompositeOperation='overlay';ctx.translate(Math.random()*160,Math.random()*160);ctx.fillStyle=noisePat;ctx.fillRect(-160,-160,w+320,w+320);ctx.restore();
+  const vg=ctx.createRadialGradient(w/2,w/2,w*0.35,w/2,w/2,w*0.75);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,0.6)');ctx.fillStyle=vg;ctx.fillRect(0,0,w,w);
+  if(S.labels&&cine.fill>0.92&&!masked&&S.big==='ang'){
+    ctx.font=`600 ${Math.round(11*dpr)}px ui-monospace,Menlo,monospace`;ctx.textBaseline='middle';ctx.lineJoin='round';
+    for(const v of vis){if(!SHOWLAB.has(v.id)&&v.id!==S.sel)continue;const q=P(v.pts[Math.floor(v.pts.length*0.62)],m),t=LABTXT[v.id]||v.id;
+      ctx.lineWidth=3*dpr;ctx.strokeStyle='rgba(0,0,0,0.85)';ctx.strokeText(t,q[0]+6*dpr,q[1]-6*dpr);
+      ctx.fillStyle=v.id===S.sel?'#f0a030':'#ffd27f';ctx.fillText(t,q[0]+6*dpr,q[1]-6*dpr)}}
+}
+function pick2D(cx,cy){const r=cv.getBoundingClientRect(),dpr=cv.width/r.width,x=(cx-r.left)*dpr,y=(cy-r.top)*dpr,P=proj2D(cv.width);
+  let bd=(22*dpr)**2,bv=null;for(const v of visVes())for(const p of v.pts){const q=P(p,1),d=(q[0]-x)**2+(q[1]-y)**2;if(d<bd){bd=d;bv=v}}return bv}
+
+/* ---------- 3D heart (Three.js) ---------- */
+const HAS3=!!window.THREE;let R3=null,RM=null;
+const toW=p=>new THREE.Vector3(-p[0],p[1],p[2]);  // patient (left-handed) -> world (right-handed, x = patient right)
+function tube(pts,r,mat,seg){return new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map(toW)),seg||48,r,12,false),mat)}
+function ell(p,s,mat){const m=new THREE.Mesh(new THREE.SphereGeometry(1,28,18),mat);m.position.copy(toW(p));m.scale.set(s[0],s[1],s[2]);return m}
+function heartGeo(){
+  const ts=[];for(let i=0;i<=14;i++)ts.push(-0.26+0.26*i/14);for(let i=1;i<=50;i++)ts.push(i/50);for(let i=1;i<=8;i++)ts.push(1+0.12*i/8);
+  const nTh=48,pos=[],idx=[];
+  for(const t of ts){const r=meshR(t),c=add(B,sc(W,t*H));for(let j=0;j<nTh;j++){const a=j/nTh*2*Math.PI,p=add(c,add(sc(U,Math.cos(a)*r),sc(V,Math.sin(a)*r)));pos.push(-p[0],p[1],p[2])}}
+  for(let i=0;i<ts.length-1;i++)for(let j=0;j<nTh;j++){const a=i*nTh+j,b=i*nTh+(j+1)%nTh,c=(i+1)*nTh+j,d=(i+1)*nTh+(j+1)%nTh;idx.push(a,c,b,b,c,d)}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();
+  const k=40*nTh,n=new THREE.Vector3().fromBufferAttribute(g.attributes.normal,k),p=new THREE.Vector3().fromBufferAttribute(g.attributes.position,k),ctr=toW(add(B,sc(W,ts[40]*H)));
+  if(n.dot(p.sub(ctr))<0){for(let i=0;i<idx.length;i+=3){const t=idx[i+1];idx[i+1]=idx[i+2];idx[i+2]=t}g.setIndex(idx);g.computeVertexNormals()}
+  return g}
+function init3D(){
+  const host=$('#gl3d'),renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.setClearColor(0x0d0f12);host.appendChild(renderer.domElement);
+  const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(26,1,1,500);
+  scene.add(new THREE.AmbientLight(0xffffff,0.42));scene.add(new THREE.HemisphereLight(0xdfe8ff,0x301010,0.3));
+  const key=new THREE.DirectionalLight(0xffffff,0.95);scene.add(key);scene.add(key.target);
+  const fill=new THREE.DirectionalLight(0x9fb7ff,0.25);scene.add(fill);scene.add(fill.target);
+  const iso=toW(C0);
+  const mk=(c,e)=>new THREE.MeshStandardMaterial({color:c,roughness:0.62,metalness:0,emissive:e||0x000000});
+  const mHeart=mk(0x7e2f29,0x160404),mAtr=mk(0x8a3a33,0x140404),mVein=mk(0x56627c),mAorta=mk(0x8f6764),mPA=mk(0x6a6f8c);
+  const anat=[mHeart,mAtr,mVein,mAorta,mPA];
+  const beatG=new THREE.Group();scene.add(beatG);
+  beatG.add(new THREE.Mesh(heartGeo(),mHeart));
+  const RA=add(add(add(B,sc(W,-1.4)),sc(V,-2.4)),sc(U,-0.6)),LA=add(add(add(B,sc(W,-1.3)),sc(U,-2.6)),sc(V,0.8));
+  beatG.add(ell(RA,[2.5,2.6,2.9],mAtr));beatG.add(ell(LA,[2.7,2.0,2.2],mAtr));
+  beatG.add(ell(add(add(add(B,sc(W,-0.5)),sc(V,3.0)),sc(U,0.9)),[1.1,0.8,1.0],mAtr));
+  beatG.add(tube([add(AO,[0,0,-0.6]),AO,add(AO,[0,0,3]),add(AO,[0.3,-1.2,6.2]),add(AO,[1.8,-4.5,7.2]),add(AO,[3,-6.3,4.5]),add(AO,[3,-6.5,-4]),add(AO,[2.8,-6.5,-18])],1.35,mAorta,80));
+  const PAo=add(add(add(B,sc(U,3.0)),sc(V,1.6)),sc(W,-0.2));
+  beatG.add(tube([PAo,add(PAo,[0.2,0.2,2.5]),add(PAo,[0.6,-0.8,4.6]),add(PAo,[2.6,-3,5.4])],1.25,mPA));
+  beatG.add(tube([add(PAo,[0.5,-0.6,4.4]),add(PAo,[-1.8,-3.2,5.2]),add(PAo,[-5,-3.6,4.8])],0.95,mPA));
+  beatG.add(tube([add(RA,[-0.3,-0.3,1.6]),add(RA,[-0.6,-0.5,6]),add(RA,[-0.8,-0.8,11])],1.0,mVein));
+  beatG.add(tube([add(RA,[0.2,-0.5,-1.6]),add(RA,[0.4,-1,-6]),add(RA,[0.6,-1.5,-11])],1.1,mVein));
+  const vesG=new THREE.Group();beatG.add(vesG);
+  const mVes=new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.38,metalness:0.05,emissive:0x101010});
+  const mCath=new THREE.MeshStandardMaterial({color:0x3a3d44,roughness:0.5});
+  const cath={L:tube(CATH.L,0.12,mCath,60),R:tube(CATH.R,0.12,mCath,60)};scene.add(cath.L);scene.add(cath.R);
+  // skeleton
+  const skelG=new THREE.Group();scene.add(skelG);
+  const mBone=new THREE.MeshBasicMaterial({color:0xb0bac6,transparent:true,opacity:0.13,depthWrite:false});
+  for(let z=-16;z<=17;z+=2.3){const m=new THREE.Mesh(new THREE.BoxGeometry(2.8,2.2,1.7),mBone);m.position.copy(toW([0,-8.4,z]));skelG.add(m)}
+  for(let i=0;i<11;i++){const z0=13-i*2.5,rx=8.5+Math.min(i,6)*0.75,ry=6.8+Math.min(i,6)*0.3,cy=-1.2;
+    for(const sd of [-1,1]){const pts=[];for(let f=0.12;f<=2.72;f+=0.13)pts.push([sd*rx*Math.sin(f),cy-ry*Math.cos(f),z0-2.8*Math.pow(f/Math.PI,2)]);skelG.add(tube(pts,0.38,mBone,40))}}
+  {const m=new THREE.Mesh(new THREE.BoxGeometry(2.2,0.7,14),mBone);m.position.copy(toW([0,5.9,4]));skelG.add(m)}
+  for(const sd of [-1,1])skelG.add(tube([[sd*1.5,5.5,13.5],[sd*6,4,14.5],[sd*11,1,15.5]],0.45,mBone,20));
+  // X-ray source, beam and detector (shown in the free view)
+  const rig=new THREE.Group();scene.add(rig);const SRC=19,DET=12,HS=4.2;
+  const oM=new THREE.MeshBasicMaterial({color:0xf0a030,transparent:true,opacity:0.16,side:THREE.DoubleSide,depthWrite:false});rig.userData={SRC,DET,HS,mat:oM};
+  {const pl=new THREE.Mesh(new THREE.PlaneGeometry(HS*2.4,HS*2.4),oM);pl.position.z=DET;rig.add(pl);
+   const ln=(pts,o)=>{const g=new THREE.BufferGeometry().setFromPoints(pts.map(p=>new THREE.Vector3(...p)));return new THREE.Line(g,new THREE.LineBasicMaterial({color:0xf0a030,transparent:true,opacity:o}))};
+   rig.add(ln([[-HS*1.2,-HS*1.2,DET],[HS*1.2,-HS*1.2,DET],[HS*1.2,HS*1.2,DET],[-HS*1.2,HS*1.2,DET],[-HS*1.2,-HS*1.2,DET]],0.9));
+   rig.add(ln([[-HS,-HS,DET],[HS,-HS,DET],[HS,HS,DET],[-HS,HS,DET],[-HS,-HS,DET]],0.9));
+   for(const [a,b] of [[-1,-1],[1,-1],[1,1],[-1,1]])rig.add(ln([[0,0,-SRC],[a*HS,b*HS,DET]],0.45));
+   rig.add(ln([[0,0,-SRC],[0,0,DET]],0.8));
+   const cg=new THREE.ConeGeometry(HS*Math.SQRT2,SRC+DET,4,1,true);cg.rotateX(-Math.PI/2);cg.rotateZ(Math.PI/4);const cone=new THREE.Mesh(cg,new THREE.MeshBasicMaterial({color:0xf0a030,transparent:true,opacity:0.07,side:THREE.DoubleSide,depthWrite:false}));cone.position.z=(DET-SRC)/2;rig.add(cone);
+   const src=new THREE.Mesh(new THREE.SphereGeometry(0.7,16,12),new THREE.MeshBasicMaterial({color:0xf0a030}));src.position.z=-SRC;rig.add(src);
+   const s1=textSprite('X-ray','#e6e8eb',1.6);s1.position.set(2.2,1.4,-SRC);rig.add(s1);
+   const s2=textSprite('Detector (I/I)','#f0a030',1.4);s2.position.set(0,-HS*1.2-1.2,DET);rig.add(s2)}
+  // AV-groove plane and interventricular plane
+  const planeG=new THREE.Group();scene.add(planeG);
+  const wv=p=>new THREE.Vector3(-p[0],p[1],p[2]);
+  const mkPlane=(ctr,ax,ay,sx,sy,col)=>{const m=new THREE.Mesh(new THREE.CircleGeometry(1,64),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.2,side:THREE.DoubleSide,depthWrite:false}));
+    const X=wv(ax).normalize(),Y=wv(ay).normalize(),Z=new THREE.Vector3().crossVectors(X,Y);m.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(X,Y,Z));m.scale.set(sx,sy,1);m.position.copy(toW(ctr));
+    const e=new THREE.LineLoop(new THREE.EdgesGeometry(new THREE.CircleGeometry(1,64)),new THREE.LineBasicMaterial({color:col}));e.quaternion.copy(m.quaternion);e.scale.copy(m.scale);e.position.copy(m.position);planeG.add(m);planeG.add(e);
+    const lab=textSprite(col===0x33c3b0?'AV plane':'IV plane',col===0x33c3b0?'#5fe0cf':'#c6a6ff',1.2);lab.position.copy(m.position).addScaledVector(X,sx*0.85);planeG.add(lab)};
+  mkPlane(add(B,sc(W,0.75)),U,V,5.6,5.6,0x33c3b0);
+  mkPlane(add(B,sc(W,H*0.5)),W,IVE,H*0.62,4.6,0xa77bf0);
+  planeG.visible=false;
+  R3={renderer,scene,camera,key,fill,iso,anat,beatG,vesG,mVes,cath,skelG,rig,planeG,ray:new THREE.Raycaster()};
+  new ResizeObserver(()=>{const r=host.getBoundingClientRect();if(r.width<10)return;renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix();
+    const lc=$('#lab3d'),d=Math.min(window.devicePixelRatio||1,2);lc.width=r.width*d;lc.height=r.height*d}).observe(host);
+  rebuild3D();applyAnat();
+}
+function rebuild3D(){if(!R3)return;
+  for(const c of [...R3.vesG.children]){c.geometry.dispose();R3.vesG.remove(c)}
+  for(const v of VES){const n=Math.max(12,Math.round(v.len*6)),r=Math.max(0.06,v.w*0.045);
+    const geo=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(v.pts.map(toW)),n,r,8,false);
+    geo.setAttribute('color',new THREE.BufferAttribute(new Float32Array(geo.attributes.position.count*3),3));
+    const mesh=new THREE.Mesh(geo,R3.mVes);mesh.userData={v,n};v.mesh=mesh;R3.vesG.add(mesh)}}
+function applyAnat(){if(!R3)return;
+  for(const m of R3.anat){m.transparent=S.see;m.opacity=S.see?0.42:1;m.depthWrite=!S.see;m.needsUpdate=true}
+  R3.skelG.visible=S.skel}
+function colour3D(){if(!R3)return;const F=frame(S.rot,S.ang),d=F.d,sides=visSides();
+  for(const v of VES){const mesh=v.mesh;if(!mesh)continue;mesh.visible=sides.includes(v.side);if(!mesh.visible)continue;
+    const col=mesh.geometry.attributes.color.array,T=mesh.geometry.tangents,n=mesh.userData.n,rr=9,base=hexRGB(colOf(v));
+    const dim=S.sel&&S.sel!==v.id?0.3:1;
+    for(let i=0;i<=n;i++){const c=S.col==='fore'?foreRGB(Math.abs(-T[i].x*d[0]+T[i].y*d[1]+T[i].z*d[2])):base;
+      for(let j=0;j<rr;j++){const k=(i*rr+j)*3;col[k]=c[0]*dim;col[k+1]=c[1]*dim;col[k+2]=c[2]*dim}}
+    mesh.geometry.attributes.color.needsUpdate=true}
+  R3.cath.L.visible=sides.includes('L');R3.cath.R.visible=sides.includes('R')}
+function render3D(cine){if(!R3)return;
+  const FB=frame(S.rot,S.ang),F=S.det?FB:frame(S.orb.r,S.orb.a),dist=(S.det?44:78)/S.zoom,cam=R3.camera,iso=R3.iso;
+  {const bd=new THREE.Vector3(-FB.d[0],FB.d[1],FB.d[2]),bu=new THREE.Vector3(-FB.u[0],FB.u[1],FB.u[2]),br=new THREE.Vector3(-FB.r[0],FB.r[1],FB.r[2]);
+   R3.rig.visible=!S.det&&!masked;R3.rig.position.copy(iso);R3.rig.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(br,bu,bd));R3.planeG.visible=S.planes}
+  const dW=new THREE.Vector3(-F.d[0],F.d[1],F.d[2]),uW=new THREE.Vector3(-F.u[0],F.u[1],F.u[2]),rW=new THREE.Vector3(-F.r[0],F.r[1],F.r[2]);
+  cam.position.copy(iso).addScaledVector(dW,dist);cam.up.copy(uW);cam.lookAt(iso);
+  R3.key.position.copy(cam.position).addScaledVector(uW,20).addScaledVector(rW,-12);R3.key.target.position.copy(iso);
+  R3.fill.position.copy(iso).addScaledVector(dW,-30).addScaledVector(rW,20);R3.fill.target.position.copy(iso);
+  const m=cine.m;R3.beatG.scale.setScalar(m);R3.beatG.position.copy(iso).multiplyScalar(1-m);
+  R3.renderer.render(R3.scene,cam);
+  const lc=$('#lab3d'),x=lc.getContext('2d');x.clearRect(0,0,lc.width,lc.height);
+  if(S.labels&&S.big==='3d'&&!masked){const d=lc.width/Math.max(1,lc.clientWidth);x.font=`600 ${Math.round(11*d)}px ui-monospace,Menlo,monospace`;x.textBaseline='middle';x.lineJoin='round';
+    for(const v of visVes()){if(!SHOWLAB.has(v.id)&&v.id!==S.sel)continue;
+      const p=toW(v.pts[Math.floor(v.pts.length*0.62)]).multiplyScalar(m).addScaledVector(iso,1-m).project(cam);
+      const sx=(p.x+1)/2*lc.width+6*d,sy=(1-p.y)/2*lc.height-6*d,t=LABTXT[v.id]||v.id;
+      if(v.id===S.sel){const w=x.measureText(t).width+10*d,h=18*d;x.fillStyle='#f0a030';x.beginPath();x.roundRect?x.roundRect(sx-5*d,sy-h/2,w,h,4*d):x.rect(sx-5*d,sy-h/2,w,h);x.fill();x.fillStyle='#111';x.fillText(t,sx,sy);continue}
+      x.lineWidth=3*d;x.strokeStyle='rgba(0,0,0,.85)';x.strokeText(t,sx,sy);x.fillStyle='#f3f4f6';x.fillText(t,sx,sy)}}
+  if(S.big==='3d'&&!masked)drawCube(x,lc,F);
+}
+// orientation cube: faces labelled with patient directions, seen from the current camera
+function drawCube(x,lc,F){const d=lc.width/Math.max(1,lc.clientWidth),s=17*d,cx=40*d,cy=lc.height-40*d,P=v=>[cx+dot(v,F.r)*s,cy-dot(v,F.u)*s];
+  const faces=[];const L=[['L','R'],['A','P'],['H','F']];
+  for(let k=0;k<3;k++)for(const sg of [1,-1]){const n=[0,0,0];n[k]=sg;const vis=dot(n,F.d);if(vis<=0.02)continue;const i=(k+1)%3,j=(k+2)%3,cs=[];
+    for(const [a,b] of [[-1,-1],[1,-1],[1,1],[-1,1]]){const v=[0,0,0];v[k]=sg;v[i]=a;v[j]=b;cs.push(P(v))}faces.push({vis,cs,c:P(n),t:L[k][sg>0?0:1]})}
+  faces.sort((a,b)=>a.vis-b.vis);x.lineJoin='round';
+  for(const f of faces){x.beginPath();f.cs.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.closePath();
+    x.fillStyle=`rgba(${20+20*f.vis|0},${26+24*f.vis|0},${36+30*f.vis|0},0.95)`;x.fill();x.strokeStyle='#6d7d94';x.lineWidth=1.2*d;x.stroke();
+    x.fillStyle=`rgba(240,244,250,${0.35+0.65*f.vis})`;x.font=`700 ${Math.round((9+7*f.vis)*d)}px ui-monospace,Menlo,monospace`;x.textAlign='center';x.textBaseline='middle';x.fillText(f.t,f.c[0],f.c[1])}
+  x.textAlign='left'}
+function pick3D(cx,cy){if(!R3)return null;const r=R3.renderer.domElement.getBoundingClientRect();
+  const ndc=new THREE.Vector2((cx-r.left)/r.width*2-1,-(cy-r.top)/r.height*2+1);R3.ray.setFromCamera(ndc,R3.camera);
+  const hits=R3.ray.intersectObjects(R3.vesG.children.filter(o=>o.visible));
+  if(hits.length)return hits[0].object.userData.v;
+  // generous fallback: nearest projected centreline point
+  let bd=0.0045,bv=null;for(const v of visVes())for(const p of v.pts){const q=toW(p).project(R3.camera),d=(q.x-ndc.x)**2+(q.y-ndc.y)**2;if(d<bd){bd=d;bv=v}}return bv}
+
+/* ---------- 3D room ---------- */
+function textSprite(txt,color,h){const c=document.createElement('canvas'),x=c.getContext('2d');x.font='700 44px ui-monospace,Menlo,monospace';
+  const w=Math.ceil(x.measureText(txt).width)+24;c.width=w;c.height=64;x.font='700 44px ui-monospace,Menlo,monospace';x.textBaseline='middle';
+  x.lineWidth=8;x.lineJoin='round';x.strokeStyle='rgba(0,0,0,.85)';x.strokeText(txt,12,34);x.fillStyle=color;x.fillText(txt,12,34);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthTest:false,transparent:true}));sp.scale.set(h*w/64,h,1);sp.renderOrder=20;return sp}
+function initRoom(){
+  const host=$('#roomHost'),renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.setClearColor(0x0b0e13);host.appendChild(renderer.domElement);
+  const scene=new THREE.Scene();scene.fog=new THREE.Fog(0x0b0e13,180,420);
+  const iso=toW(C0),camera=new THREE.PerspectiveCamera(38,16/11,1,1000);
+  camera.position.set(iso.x+165,iso.y+105,iso.z-120);camera.lookAt(iso.x,iso.y-14,iso.z-18);
+  scene.add(new THREE.AmbientLight(0xffffff,0.5));const dl=new THREE.DirectionalLight(0xffffff,0.75);dl.position.set(80,140,-40);scene.add(dl);
+  const floorY=iso.y-40;const grid=new THREE.GridHelper(500,40,0x1d2733,0x151c25);grid.position.set(iso.x,floorY,iso.z);scene.add(grid);
+  const M=(c,o)=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:0.7,metalness:0.1},o||{}));
+  const mDark=M(0x2d3542),mMid=M(0x4a5262),mArc=M(0xb8bec8,{roughness:0.4}),mSkin=M(0xcfc6b6,{roughness:0.85,transparent:true,opacity:0.92}),mTable=M(0x222a36);
+  const box=(sx,sy,sz,m,x,y,z)=>{const b=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),m);b.position.set(x,y,z);scene.add(b);return b};
+  // table + pedestal (table top just under the patient's back)
+  box(46,3,175,mTable,iso.x,iso.y-13,iso.z-42);box(20,iso.y-13-floorY,26,mDark,iso.x,(iso.y-13+floorY)/2,iso.z-95);
+  // patient (supine, head toward +z)
+  const limb=(a,b,r)=>{const A=toW(a),Bv=toW(b),len=A.distanceTo(Bv);const c=new THREE.Mesh(new THREE.CylinderGeometry(r,r,len,16),mSkin);c.position.copy(A).add(Bv).multiplyScalar(0.5);c.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),Bv.clone().sub(A).normalize());scene.add(c);
+    for(const p of [A,Bv]){const s=new THREE.Mesh(new THREE.SphereGeometry(r,16,12),mSkin);s.position.copy(p);scene.add(s)}};
+  {const g=new THREE.CylinderGeometry(1,1,46,28);g.rotateX(Math.PI/2);const t=new THREE.Mesh(g,mSkin);t.scale.set(13,9.5,1);t.position.copy(toW([0,-1.5,-9]));scene.add(t)}
+  {const h=new THREE.Mesh(new THREE.SphereGeometry(7,24,18),mSkin);h.position.copy(toW([0,-2,25]));scene.add(h)}
+  limb([0,-2,14],[0,-2,19],3.2);
+  for(const sd of [-1,1]){limb([sd*14.5,-2,11],[sd*16.5,-4,-30],3);limb([sd*6.5,-3,-32],[sd*6.5,-4,-112],4.5)}
+  {const h=new THREE.Mesh(new THREE.SphereGeometry(1,20,14),M(0xb33a33));h.scale.set(5,4,5.5);h.position.copy(iso);scene.add(h)}
+  const sL=textSprite('L','#f3f4f6',8);sL.position.copy(toW([19,4,-40]));scene.add(sL);
+  const sR=textSprite('R','#f3f4f6',8);sR.position.copy(toW([-19,4,-40]));scene.add(sR);
+  // C-arm: stand at the head end, propeller axis = patient long axis (LAO/RAO), orbital slide in the C (CRA/CAU)
+  const R=56,standZ=iso.z+R+18;
+  box(16,iso.y+6-floorY,14,mDark,iso.x,(iso.y+6+floorY)/2,standZ);box(30,2,30,mDark,iso.x,floorY+1,standZ);
+  {const c=new THREE.Mesh(new THREE.CylinderGeometry(4,4,standZ-(iso.z+R+3),20),mMid);c.rotation.x=Math.PI/2;c.position.set(iso.x,iso.y,(standZ+iso.z+R+3)/2);scene.add(c)}
+  const outer=new THREE.Group();outer.position.copy(iso);scene.add(outer);
+  {const b=new THREE.Mesh(new THREE.BoxGeometry(9,9,6),mMid);b.position.set(0,0,R+3);outer.add(b)}
+  const inner=new THREE.Group();outer.add(inner);
+  const arcPts=[];for(let i=0;i<=48;i++){const s=i/48*Math.PI;arcPts.push(new THREE.Vector3(0,R*Math.cos(s),R*Math.sin(s)))}
+  inner.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(arcPts),64,2.2,14,false),mArc));
+  {const d=new THREE.Mesh(new THREE.BoxGeometry(18,4,18),mDark);d.position.set(0,R-4,0);inner.add(d);
+   const f=new THREE.Mesh(new THREE.PlaneGeometry(15,15),new THREE.MeshBasicMaterial({color:0xf0a030,transparent:true,opacity:0.35,side:THREE.DoubleSide}));f.rotation.x=Math.PI/2;f.position.set(0,R-6.2,0);inner.add(f)}
+  {const t=new THREE.Mesh(new THREE.CylinderGeometry(5.5,5.5,12,22),mMid);t.rotation.z=Math.PI/2;t.position.set(0,-(R-5),0);inner.add(t)}
+  {const g=new THREE.ConeGeometry(7.5,2*R-14,4,1,true);g.rotateX(Math.PI);g.rotateY(Math.PI/4);
+   const c=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:0xf0a030,transparent:true,opacity:0.16,depthWrite:false,side:THREE.DoubleSide}));inner.add(c)}
+  const sD=textSprite('Detector (I/I)','#f0a030',7);sD.position.set(0,R+7,0);inner.add(sD);
+  const sT=textSprite('X-ray tube','#e6e8eb',7);sT.position.set(0,-(R+9),0);inner.add(sT);
+  RM={renderer,scene,camera,outer,inner};
+  new ResizeObserver(()=>{const r=host.getBoundingClientRect();if(r.width<10)return;renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix();roomDirty=true}).observe(host);
+}
+function renderRoom(){if(!RM)return;RM.outer.rotation.z=S.rot*D2R;RM.inner.rotation.x=S.ang*D2R;RM.renderer.render(RM.scene,RM.camera)}
+
+/* ---------- UI ---------- */
+function presetsHTML(){
+  const blk=(side,title)=>`<div class="sub2"><span class="cap">${title}</span></div><div class="grid3">`+
+    PRESETS[side].map(p=>`<button class="pre" data-p="${p.id}"><b>${p.n.replace(' (RCA)','')}</b><small>${fmtV(p.r,p.a)}</small></button>`).join('')+'</div>';
+  $('#presetP').innerHTML=blk('L','Left coronary')+blk('R','Right coronary');
+  $$('#presetP .pre').forEach(b=>b.onclick=()=>{const p=findP(b.dataset.p);if(S.art!=='B'&&S.art!==p.side)setArt(p.side);goTo(p.r,p.a)});
+}
+function goTo(r,a){S.tw={f:[S.rot,S.ang],to:[r,a],t0:performance.now()}}
+function setArt(a){S.art=a;$$('#artSeg button').forEach(b=>b.classList.toggle('on',b.dataset.a===a));best=null;invalidate()}
+function setBig(b){S.big=b;const ib=$('#insetBtn');if(ib)ib.textContent=(S.inset?'Hide ':'Show ')+(b==='3d'?'angiogram':'3D view');$('#v3d').className='view '+(b==='3d'?'big':'small');$('#vAng').className='view '+(b==='ang'?'big':'small');$('#angCap').textContent='ANGIO';invalidate()}
+const vById=id=>VES.find(v=>v.id===id);
+const SYN={pRCA:'1',mRCA:'2',dRCA:'3',LM:'5',pLAD:'6',mLAD:'7',aLAD:'8',D1:'9',D2:'10',pLCx:'11',RI:'12',OM1:'12a',OM2:'12b',dLCx:'13'};
+const syntax=v=>SYN[v.id]||({PDA:{R:'4',L:'15'},PL1:{R:'16a',L:'14a'},PL2:{R:'16b',L:'14b'}}[v.id]||{})[v.side]||'';
+const chip=(v,txt)=>`<button class="chip" data-sel="${v.id}"><i style="background:${colOf(v)}"></i>${v.id} <span>${txt}</span></button>`;
+const pc=x=>Math.round(x*100)+'%';
+
+function updateUI(){
+  stats();colour3D();
+  const r=Math.round(S.rot),a=Math.round(S.ang),F=frame(S.rot,S.ang);
+  $('#rot').value=r;$('#ang').value=a;
+  $('#rotTxt').textContent=(r<0?'RAO ':r>0?'LAO ':'AP ')+Math.abs(r)+'°';
+  $('#angTxt').textContent=(a<0?'CAU ':a>0?'CRA ':'')+Math.abs(a)+'°';
+  const ang=fmtV(r,a);
+  $('#ovAng').textContent=ang;$('#padTxt').textContent=ang;$('#ctlSum').textContent=ang;$('#roomCap').textContent=ang;
+  $('#ovArt').textContent=S.art==='L'?'LCA':S.art==='R'?'RCA':'LCA + RCA';
+  const free=!S.det&&S.big==='3d';$$('.edge').forEach(e=>e.style.visibility=free?'hidden':'');
+  $('#eR').textContent=orient(F.r);$('#eL').textContent=orient(sc(F.r,-1));$('#eT').textContent=orient(F.u);$('#eB').textContent=orient(sc(F.u,-1));
+  $('#fsLeg').style.display=S.col==='fore'&&S.big==='3d'?'block':'none';
+  const nl=nearestList(),n0=nl[0],d0=Math.round(n0.d);
+  const vname=d0<=6?n0.p.n:`near ${n0.p.n} (${d0}°)`;
+  $('#ovView').textContent=vname;$('#cvSum').textContent=vname;
+  $$('.pre').forEach(b=>b.classList.toggle('on',b.dataset.p===n0.p.id&&d0<=6));
+  // current view panel
+  const list=visVes();
+  const good=list.filter(v=>v.fs<0.25&&v.ov<0.1).sort((x,y)=>(x.fs+x.ov)-(y.fs+y.ov)).slice(0,5);
+  const fsl=list.filter(v=>v.fs>=0.35).sort((x,y)=>y.fs-x.fs).slice(0,5);
+  const ovl=list.filter(v=>v.ov>=0.15).sort((x,y)=>y.ov-x.ov).slice(0,5);
+  const near2=nl.slice(0,2).map(o=>`<button class="lnk" data-go="${o.p.id}">${o.p.n}</button> <span class="mono muted">${Math.round(o.d)}°</span>`).join(' and ');
+  const tube=fmtR(-S.rot)+(a?' / '+fmtA(-S.ang):'');
+  $('#info').innerHTML=`<h3>${d0<=6?n0.p.n:'Between standard views'}</h3>
+    ${d0<=6?`<p>${n0.p.best} <span class="muted">${n0.p.tip}</span></p>`:`<p>Nearest: ${near2}. Read the lists below to see what this angle opens up and what it hides.</p>`}
+    <div class="kv">
+      <span class="k">Seen best</span><div class="chips">${good.map(v=>chip(v,pc(v.fs))).join('')||'<span class="muted">—</span>'}</div>
+      <span class="k">Foreshortened</span><div class="chips">${fsl.map(v=>chip(v,pc(v.fs))).join('')||'<span class="muted">—</span>'}</div>
+      <span class="k">Overlapped</span><div class="chips">${ovl.map(v=>chip(v,pc(v.ov)+' · '+v.ovWith)).join('')||'<span class="muted">—</span>'}</div>
+      <span class="k">Detector</span><span class="mono">${ang}</span>
+      <span class="k">Tube</span><span class="mono">${tube} (under table)</span>
+      <span class="k">AV plane</span><span>${planeTxt('av',F)}</span>
+      <span class="k">IV plane</span><span>${planeTxt('iv',F)}</span>
+      <span class="k">Spine</span><span>${S.rot<-5?'image left (RAO)':S.rot>5?'image right (LAO)':'midline (AP)'}</span>
+    </div>
+    <div class="fine">Foreshortening (parallel projection) and overlap of each segment at exactly this angle, from the 3D centrelines.</div>`;
+  // segments
+  $('#segSum').innerHTML=S.sel&&vById(S.sel)?`<b style="color:var(--acc)">${S.sel}</b> ${vById(S.sel).name}`:(S.art==='B'?'Both systems':S.art==='L'?'Left coronary':'Right coronary')+' · '+({R:'right',L:'left',C:'co'})[S.dom]+'-dominant';
+  $('#segT').innerHTML=list.map(v=>`<tr class="r${v.id===S.sel?' sel':''}" data-sel="${v.id}"><td class="dot"><i style="background:${colOf(v)}"></i></td><td class="id">${v.id}${syntax(v)?`<small class="syn">${syntax(v)}</small>`:''}</td><td class="nm">${v.name}</td>
+    <td class="bc"><div class="barc"><span style="width:${Math.round(v.fs*100)}%;background:${css(foreRGB(v.fs*1.3))}"></span></div></td><td class="p">${pc(v.fs)}</td>
+    <td class="olap">${v.ov>=0.03?pc(v.ov)+' · '+v.ovWith:''}</td></tr>`).join('');
+  // selection
+  const sb=$('#selbar'),sv=S.sel&&list.find(v=>v.id===S.sel);
+  if(sv){const b=bestFor(sv);sb.hidden=false;
+    const syn=syntax(sv),card=`<div class="scard"><div class="sh"><span><b>${sv.id}</b> ${sv.name}${syn?` <span class="muted">· SYNTAX ${syn}</span>`:''}</span><button class="lnk muted" data-clr="1">clear</button></div>
+      <div>Clearest view <button class="lnk mono" data-best="1">${fmtV(b.r,b.a)}</button> (foreshortening ${pc(b.fs)}, overlap ${pc(b.ov)}); here <span class="mono">${pc(sv.fs)} · ${pc(sv.ov)}</span>${sv.ov>=0.03?` <span class="muted">(behind ${sv.ovWith})</span>`:''}</div></div>`;
+    sb.innerHTML=card+`<div class="row"><button class="act" data-best="1">Go to clearest view</button></div>`;
+    $('#segCard').innerHTML=card;$('#segCard').hidden=false;
+    $$('[data-best]').forEach(x=>x.onclick=()=>goTo(b.r,b.a));$$('[data-clr]').forEach(x=>x.onclick=()=>{S.sel=null;invalidate()});
+    const ML={clear:'Clear map: bright = laid out flat <i>and</i> free of overlap; dark = foreshortened or hidden.',fore:'Foreshortening map: blue = laid out flat, red = end-on.',over:'Overlap map: orange = another branch crosses it.'};
+    $('#padNote').innerHTML=`○ clearest view of <b>${sv.id}</b>: <span class="mono">${fmtV(b.r,b.a)}</span>, ${pc(b.fs)} foreshortened · ${pc(b.ov)} overlapped.<br>${ML[S.padMap]}`;
+  }else{sb.hidden=true;$('#segCard').hidden=true;$('#padNote').textContent='Tap a segment (on the heart, the angiogram or the Segments list) to map where it is seen clearest. Drag on the pad to move the C-arm. Dotted = left coronary views, dashed = right coronary views.'}
+  $('#domSum').textContent=S.dom==='R'?'Right: PDA + PL from RCA':S.dom==='L'?'Left: PDA from LCx, small RCA':'Co: PDA from RCA, PL from LCx';
+  drawPad();
+}
+document.addEventListener('click',e=>{const s=e.target.closest('[data-sel]');if(s&&!masked){S.sel=S.sel===s.dataset.sel?null:s.dataset.sel;invalidate();return}
+  const g=e.target.closest('[data-go]');if(g){const p=findP(g.dataset.go);goTo(p.r,p.a)}});
+
+/* ---------- the two cardiac planes (Paulin) ---------- */
+const AVN_=W,IVE=add(sc(U,Math.cos(32*D2R)),sc(V,Math.sin(32*D2R))),IVN=norm(cross(W,IVE));
+function planeTxt(k,F){const c=Math.abs(dot(F.d,k==='av'?AVN_:IVN));
+  if(k==='av')return c>0.72?'en face: looking down the AV groove, the RCA and LCx form a ring':c<0.35?'edge-on: the AV groove (RCA, LCx) runs as a line across the image':'oblique';
+  return c>0.72?'en face: the septum faces you, LAD and PDA lie along one line (RAO-type view)':c<0.35?'edge-on: the septum is on profile, LAD separates the LV and RV branches (LAO-type view)':'oblique'}
+
+/* ---------- angle pad ---------- */
+const pad=$('#pad');let padGeo=null;
+function drawPad(){
+  const dpr=Math.min(window.devicePixelRatio||1,2),Wd=pad.clientWidth||320,Hd=Math.round(Wd*0.6);
+  pad.style.height=Hd+'px';pad.width=Wd*dpr;pad.height=Hd*dpr;const x=pad.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);
+  const ml=52,mr=8,mt=10,mb=36,pw=Wd-ml-mr,ph=Hd-mt-mb;padGeo={ml,mt,pw,ph};
+  const X=r=>ml+(r+90)/180*pw,Y=a=>mt+(45-a)/90*ph;
+  x.fillStyle='#0a0b0d';x.fillRect(ml,mt,pw,ph);
+  const sv=S.sel&&visVes().find(v=>v.id===S.sel),b=sv&&bestFor(sv);
+  if(b){const M=S.padMap,src=M==='fore'?b.fsG:M==='over'?b.ovG:b.clG;
+    // light blur of the 5° grid, then bilinear up-scaling, so the map reads as a smooth field
+    const g=new Float32Array(37*19);for(let i=0;i<37;i++)for(let j=0;j<19;j++){let sm=0,w=0;
+      for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++){const ii=i+di,jj=j+dj;if(ii<0||ii>36||jj<0||jj>18)continue;const ww=di||dj?(di&&dj?0.5:1):2.5;sm+=src[ii*19+jj]*ww;w+=ww}g[i*19+j]=sm/w}
+    const oc=drawPad.oc||(drawPad.oc=document.createElement('canvas'));oc.width=37;oc.height=19;const ox=oc.getContext('2d'),im=ox.createImageData(37,19);
+    for(let i=0;i<37;i++)for(let j=0;j<19;j++){const v=g[i*19+j];let c;
+      if(M==='fore')c=foreRGB(v*1.3);else if(M==='over'){const o=clamp(v*1.6,0,1);c=[0.06+0.88*o,0.08+0.46*o,0.1+0.09*o]}
+      else{const q=Math.pow(v,1.3);c=[0.07+0.5*q,0.09+0.57*q,0.12+0.62*q]}
+      const o=((18-j)*37+i)*4;im.data[o]=c[0]*255;im.data[o+1]=c[1]*255;im.data[o+2]=c[2]*255;im.data[o+3]=255}
+    ox.putImageData(im,0,0);x.save();x.beginPath();x.rect(ml,mt,pw,ph);x.clip();x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';
+    x.drawImage(oc,0.5,0.5,36,18,X(-90),Y(45),X(90)-X(-90),Y(-45)-Y(45));x.restore()}
+  x.strokeStyle='#2c3038';x.lineWidth=1;
+  for(let r=-90;r<=90;r+=30){x.beginPath();x.moveTo(X(r),mt);x.lineTo(X(r),mt+ph);x.stroke()}
+  for(let a=-45;a<=45;a+=15){x.beginPath();x.moveTo(ml,Y(a));x.lineTo(ml+pw,Y(a));x.stroke()}
+  x.strokeStyle='#4a4f58';x.beginPath();x.moveTo(X(0),mt);x.lineTo(X(0),mt+ph);x.moveTo(ml,Y(0));x.lineTo(ml+pw,Y(0));x.stroke();
+  x.fillStyle='#8a9099';x.font='11px ui-monospace,Menlo,monospace';x.textAlign='right';x.textBaseline='middle';
+  for(let a=-45;a<=45;a+=15)x.fillText(a===45?'CRA 45':a===-45?'CAU 45':Math.abs(a),ml-6,Y(a));
+  x.textAlign='center';x.textBaseline='top';for(let r=-90;r<=90;r+=30)if(r)x.fillText(Math.abs(r),X(r),mt+ph+4);
+  x.fillText('RAO',X(-78),mt+ph+19);x.fillText('AP',X(0),mt+ph+19);x.fillText('LAO',X(78),mt+ph+19);
+  x.font='12px ui-monospace,Menlo,monospace';x.textBaseline='middle';x.lineJoin='round';
+  for(const p of ALLP){if(!visSides().includes(p.side))continue;
+    const rx=pw*9/180,ry=ph*7/90;x.setLineDash(p.side==='L'?[2,3]:[5,4]);x.strokeStyle=b?'rgba(255,255,255,.6)':(p.side==='L'?'#7f8590':'#5d9c7c');
+    x.beginPath();x.ellipse(X(p.r),Y(p.a),rx,ry,0,0,Math.PI*2);x.stroke();
+    x.fillStyle=b?'#fff':(p.side==='L'?'#c9ccd1':'#8fd3b0');let lx=X(p.r)+rx+3;x.textAlign='left';if(p.la==='l'||p.r>=80){lx=X(p.r)-rx-3;x.textAlign='right'}
+    const off=S.art==='B'&&p.side==='R'?11:0;x.lineWidth=3;x.strokeStyle='rgba(0,0,0,.6)';x.setLineDash([]);if(b)x.strokeText(p.sh,lx,Y(p.a)+off);x.fillText(p.sh,lx,Y(p.a)+off)}
+  x.setLineDash([]);
+  if(b){x.strokeStyle='#fff';x.lineWidth=2.5;x.beginPath();x.arc(X(b.r),Y(b.a),9,0,Math.PI*2);x.stroke();x.fillStyle='#fff';x.beginPath();x.arc(X(b.r),Y(b.a),2.5,0,7);x.fill()}
+  if(!masked){const px=X(S.rot),py=Y(S.ang);x.strokeStyle='#f0a030';x.lineWidth=2;
+    x.beginPath();x.moveTo(px-12,py);x.lineTo(px+12,py);x.moveTo(px,py-12);x.lineTo(px,py+12);x.stroke();
+    x.fillStyle='#f0a030';x.beginPath();x.arc(px,py,5,0,Math.PI*2);x.fill()}
+}
+function padSet(e){if(!padGeo)return;const b=pad.getBoundingClientRect();
+  S.tw=null;S.rot=clamp(Math.round((e.clientX-b.left-padGeo.ml)/padGeo.pw*180-90),-90,90);S.ang=clamp(Math.round(45-(e.clientY-b.top-padGeo.mt)/padGeo.ph*90),-45,45);invalidate()}
+let padDown=false;
+pad.addEventListener('pointerdown',e=>{padDown=true;pad.setPointerCapture(e.pointerId);padSet(e)});
+pad.addEventListener('pointermove',e=>{if(padDown)padSet(e)});
+pad.addEventListener('pointerup',()=>padDown=false);pad.addEventListener('pointercancel',()=>padDown=false);
+
+/* ---------- touch: drag to orientate, pinch to zoom, tap to pick / swap ---------- */
+const K=0.35;
+function rigHit(e){if(!R3||S.det||S.big!=='3d'||!R3.rig.visible)return null;const {SRC,DET,HS}=R3.rig.userData,cv3=R3.renderer.domElement.getBoundingClientRect();
+  const sp=v=>{const q=R3.rig.localToWorld(v).project(R3.camera);return [(q.x+1)/2*cv3.width+cv3.left,(1-q.y)/2*cv3.height+cv3.top]};
+  const s=sp(new THREE.Vector3(0,0,-SRC));if(Math.hypot(s[0]-e.clientX,s[1]-e.clientY)<34)return 'src';
+  const c=[[-1,-1],[1,-1],[1,1],[-1,1]].map(([a,b])=>sp(new THREE.Vector3(a*HS*1.35,b*HS*1.35,DET)));let ins=false;
+  for(let i=0,j=3;i<4;j=i++){const [xi,yi]=c[i],[xj,yj]=c[j];if((yi>e.clientY)!==(yj>e.clientY)&&e.clientX<(xj-xi)*(e.clientY-yi)/(yj-yi)+xi)ins=!ins}
+  return ins?'det':null}
+function rigDrag(e,which){const {SRC,DET}=R3.rig.userData,cv3=R3.renderer.domElement.getBoundingClientRect(),iso=R3.iso;
+  R3.ray.setFromCamera(new THREE.Vector2((e.clientX-cv3.left)/cv3.width*2-1,-(e.clientY-cv3.top)/cv3.height*2+1),R3.camera);
+  const o=R3.ray.ray.origin,d=R3.ray.ray.direction,oc=o.clone().sub(iso),rad=which==='src'?SRC:DET;
+  const bq=oc.dot(d),cq=oc.lengthSq()-rad*rad,disc=bq*bq-cq,F=frame(S.rot,S.ang),cur=new THREE.Vector3(-F.d[0],F.d[1],F.d[2]).multiplyScalar(which==='src'?-1:1);
+  let dir;if(disc>=0){const t1=-bq-Math.sqrt(disc),t2=-bq+Math.sqrt(disc),p1=o.clone().addScaledVector(d,t1).sub(iso).normalize(),p2=o.clone().addScaledVector(d,t2).sub(iso).normalize();dir=p1.dot(cur)>=p2.dot(cur)?p1:p2}
+  else dir=o.clone().addScaledVector(d,-bq).sub(iso).normalize();
+  if(which==='src')dir.negate();const px=-dir.x,py=dir.y,pz=dir.z;
+  S.tw=null;S.rot=clamp(Math.atan2(px,py)/D2R,-90,90);S.ang=clamp(Math.asin(clamp(pz,-1,1))/D2R,-45,45);invalidate()}
+function dragArea(el,onTap,allowZoom,orbit){const ptrs=new Map();let g=null;
+  const pd=()=>{const p=[...ptrs.values()];return Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)};
+  el.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;el.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(ptrs.size===1){g={sx:e.clientX,sy:e.clientY,moved:false,target:e.target,grab:orbit?rigHit(e):null};if(g.grab)R3.rig.userData.mat.opacity=0.34}else if(ptrs.size===2&&g){g.moved=true;g.pinch=pd();g.z0=S.zoom}});
+  el.addEventListener('pointermove',e=>{const p=ptrs.get(e.pointerId);if(!p||!g)return;const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
+    if(ptrs.size===1){if(!g.moved&&Math.hypot(e.clientX-g.sx,e.clientY-g.sy)>6)g.moved=true;
+      if(g.moved&&!masked){if(g.grab)rigDrag(e,g.grab);else if(orbit&&S.big==='3d'&&!S.det){S.orb.r-=dx*0.5;S.orb.a=clamp(S.orb.a+dy*0.5,-80,80);dirty=true}
+        else{S.tw=null;S.rot=clamp(S.rot-dx*K,-90,90);S.ang=clamp(S.ang+dy*K,-45,45);invalidate()}}}
+    else if(ptrs.size===2&&allowZoom&&g.pinch){S.zoom=clamp(g.z0*pd()/g.pinch,0.6,3);dirty=true}});
+  const up=e=>{ptrs.delete(e.pointerId);if(g&&g.grab&&R3)R3.rig.userData.mat.opacity=0.16;if(ptrs.size===0&&g){if(!g.moved&&onTap)onTap(e,g.target);g=null}};
+  el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
+  if(allowZoom)el.addEventListener('wheel',e=>{e.preventDefault();S.zoom=clamp(S.zoom*Math.exp(-e.deltaY*0.0015),0.6,3);dirty=true},{passive:false});
+}
+dragArea($('#stage'),(e,t)=>{if(masked)return;
+  if(t.closest('.view.small')){setBig(S.big==='3d'?'ang':'3d');return}
+  const v=S.big==='3d'?pick3D(e.clientX,e.clientY):pick2D(e.clientX,e.clientY);
+  S.sel=v?(S.sel===v.id?null:v.id):null;invalidate()},true,true);
+dragArea($('#roomHost'),null,false);
+
+/* ---------- quiz ---------- */
+const Q={score:0,n:0,cur:null};
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+function setScore(){$('#score').textContent=`Score ${Q.score} / ${Q.n}`}
+let bigBefore='3d';
+function setMask(on){if(on&&!masked){bigBefore=S.big;setBig('ang')}else if(!on&&masked)setBig(bigBefore);
+  masked=on;document.body.classList.toggle('masked',on);if(on)S.sel=null;invalidate()}
+function quizOn(on){$('#qStop').style.display=on?'':'none';$('#qName').classList.toggle('on',!!(Q.cur&&Q.cur.type==='name'));$('#qShot').classList.toggle('on',!!(Q.cur&&Q.cur.type==='shot'))}
+function startName(){
+  const side=S.art==='B'?(Math.random()<0.5?'L':'R'):S.art;
+  const pool=PRESETS[side].filter(p=>p.id!=='ap'&&p.id!=='rap'),ans=pool[Math.floor(Math.random()*pool.length)];
+  const opts=shuffle([ans].concat(shuffle(pool.filter(p=>p!==ans)).slice(0,3)));
+  Q.cur={type:'name',ans,done:false};setArt(side);
+  S.tw=null;S.zoom=1;S.rot=clamp(ans.r+Math.round(Math.random()*6-3),-90,90);S.ang=clamp(ans.a+Math.round(Math.random()*6-3),-45,45);
+  setMask(true);quizOn(true);
+  $('#qBody').innerHTML=`<div class="qq">Which projection is this ${side==='L'?'left':'right'} coronary angiogram?</div><div class="opts">`+
+    opts.map(o=>`<button class="opt" data-o="${o.id}">${o.n.replace(' (RCA)','')}</button>`).join('')+'</div><div id="fb"></div>';
+  $$('#qBody .opt').forEach(b=>b.onclick=()=>answerName(b));
+  $('#stage').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function answerName(b){const c=Q.cur;if(!c||c.done)return;c.done=true;Q.n++;
+  const ok=b.dataset.o===c.ans.id;if(ok)Q.score++;setScore();
+  $$('#qBody .opt').forEach(x=>{if(x.dataset.o===c.ans.id)x.classList.add('right');else if(x===b)x.classList.add('wrong')});
+  setMask(false);
+  $('#fb').innerHTML=`<div class="fb ${ok?'ok':'no'}"><b>${ok?'Correct':'Not quite'}</b>: ${c.ans.n}, ${fmtV(c.ans.r,c.ans.a)}.<br>${c.ans.best} ${c.ans.tip}<div style="margin-top:8px"><button class="act" id="qNext">Next</button></div></div>`;
+  $('#qNext').onclick=startName}
+function startShot(){
+  const pool=S.art==='B'?TASKS:TASKS.filter(t=>t.art===S.art),t=pool[Math.floor(Math.random()*pool.length)];
+  Q.cur={type:'shot',t,done:false};setMask(false);setArt(t.art);goTo(0,0);quizOn(true);
+  $('#qBody').innerHTML=`<div class="qq">${t.q}</div><div class="muted" style="font-size:13px">Drag the heart (or use the sliders / angle pad), then check.</div>
+   <div style="margin-top:10px"><button class="act" id="qCheck">Check my view</button></div><div id="fb"></div>`;
+  $('#qCheck').onclick=checkShot}
+function checkShot(){const c=Q.cur;if(!c||c.done)return;c.done=true;Q.n++;
+  const oks=c.t.ok.map(findP);let bd=1e9,bp=null;for(const p of oks){const d=Math.hypot(p.r-S.rot,p.a-S.ang);if(d<bd){bd=d;bp=p}}
+  const ok=bd<=15;if(ok)Q.score++;setScore();
+  $('#fb').innerHTML=`<div class="fb ${ok?'ok':'no'}"><b>${ok?'Good shot':'Not the best view'}</b>: you were ${Math.round(bd)}° from ${bp.n}.<br>Accepted: ${oks.map(p=>`${p.n} (${fmtV(p.r,p.a)})`).join('; ')}.<br>${bp.best}
+   <div class="row" style="margin-top:8px"><button class="tog" id="qShow">Show me</button><button class="act" id="qNext">Next</button></div></div>`;
+  $('#qShow').onclick=()=>goTo(bp.r,bp.a);$('#qNext').onclick=startShot}
+$('#qName').onclick=startName;$('#qShot').onclick=startShot;
+$('#qStop').onclick=()=>{Q.cur=null;setMask(false);quizOn(false);$('#qBody').innerHTML=`<span class="muted">Quiz ended: final score ${Q.score} / ${Q.n}.</span>`};
+
+/* ---------- wiring ---------- */
+$('#rot').addEventListener('input',e=>{S.tw=null;S.rot=+e.target.value;invalidate()});
+$('#ang').addEventListener('input',e=>{S.tw=null;S.ang=+e.target.value;invalidate()});
+$$('#artSeg button').forEach(b=>b.onclick=()=>setArt(b.dataset.a));
+$$('#colSeg button').forEach(b=>b.onclick=()=>{S.col=b.dataset.c;$$('#colSeg button').forEach(x=>x.classList.toggle('on',x===b));invalidate()});
+$$('#domSeg button').forEach(b=>b.onclick=()=>{S.dom=b.dataset.d;$$('#domSeg button').forEach(x=>x.classList.toggle('on',x===b));build();rebuild3D();buildTunnel();invalidate()});
+const tog=(id,key,after)=>{$(id).onclick=()=>{S[key]=!S[key];$(id).classList.toggle('on',S[key]);if(after)after();invalidate()}};
+tog('#tLabels','labels');tog('#tCine','cine');tog('#tTint','tint');tog('#tSkel','skel',applyAnat);tog('#tSee','see',applyAnat);
+tog('#tRamus','ramus',()=>{build();rebuild3D();buildTunnel()});
+$('#tReset').onclick=()=>{S.zoom=1;dirty=true};
+tog('#tDet','det',()=>{$('#stageHint').textContent=S.det?'Detector view: you see what the detector sees. Drag to orientate the heart (moves the C-arm) · pinch to zoom · tap a vessel to analyse it':'Free view: grab the orange detector plate (or the X-ray dot) with your finger to swing the C-arm around the heart · drag anywhere else to walk around · pinch to zoom · tap a vessel to analyse it'});
+tog('#tPlanes','planes');
+$('#insetBtn').onclick=e=>{e.stopPropagation();S.inset=!S.inset;document.body.classList.toggle('noinset',!S.inset);$('#insetBtn').textContent=(S.inset?'Hide ':'Show ')+(S.big==='3d'?'angiogram':'3D view')};
+$$('#mapSeg button').forEach(b=>b.onclick=()=>{S.padMap=b.dataset.m;$$('#mapSeg button').forEach(x=>x.classList.toggle('on',x===b));dirty=true});
+
+/* ---------- cardiac cycle, ECG and heart sounds ---------- */
+const HB={phase:0,last:null,sched:-1,ac:null,buf:{},mode:'normal',cols:null,lastX:-1,clock:0};
+const AU={on:false,vol:0.8,valves:false,flow:true};
+const sysT=RR=>0.36*Math.sqrt(RR)+0.03;            // R wave -> S2 (end of T), rate-corrected
+function cardiac(dtMs){const RR=60/S.hr;HB.phase+=dtMs/1000/RR;const ts=(HB.phase%1)*RR;return {RR,ts,beat:Math.floor(HB.phase)}}
+function contraction(ts,RR){const s2=sysT(RR);
+  if(ts<0.05)return 0;if(ts<s2)return Math.sin(Math.PI/2*(ts-0.05)/(s2-0.05));
+  if(ts<s2+0.18)return Math.cos(Math.PI/2*(ts-s2)/0.18);return 0}
+// aortic pressure shape (0..1) and coronary flow shapes
+function pressure(ts,RR){const s2=sysT(RR);if(ts<0.05)return 0.15;if(ts<s2)return 0.15+0.85*Math.pow(Math.sin(Math.PI*(ts-0.05)/(s2-0.05)*0.85),0.8);
+  const td=ts-s2;return 0.15+0.55*Math.exp(-td/0.3)}
+function flowL(ts,RR){const s2=sysT(RR);if(ts<0.05)return 0.5;
+  if(ts<s2){const k=(ts-0.05)/(s2-0.05);return 0.45-0.3*Math.sin(Math.PI*Math.min(1,k*1.5))}   // squeezed by contracting myocardium
+  const td=ts-s2;return td<0.09?0.45+0.55*td/0.09:0.5+0.5*Math.exp(-(td-0.09)/0.45)}      // diastolic surge
+function flowR(ts,RR){const s2=sysT(RR);if(ts<0.05)return 0.6;
+  if(ts<s2)return 0.6+0.25*Math.sin(Math.PI*(ts-0.05)/(s2-0.05));const td=ts-s2;return 0.55+0.35*Math.exp(-td/0.35)}
+function ecgV(ts,RR){const g=(c,a,w)=>{let d=ts-c;if(d>RR/2)d-=RR;if(d<-RR/2)d+=RR;return a*Math.exp(-d*d/(2*w*w))};
+  const tT=sysT(RR)-0.09;return g(-0.16,0.12,0.022)+g(-0.03,-0.1,0.008)+g(0,1,0.01)+g(0.03,-0.25,0.01)+g(tT,0.32,0.05)}
+
+// synthesised valve-closure sounds: damped transients. Pitched a little higher than real life so phone speakers can play them.
+function mkSound(parts){const sr=HB.ac.sampleRate,len=Math.round(sr*0.26),b=HB.ac.createBuffer(1,len,sr),d=b.getChannelData(0);
+  for(const p of parts){let lp=0;for(let i=0;i<len;i++){const t=i/sr-p.at;if(t<0)continue;
+    const env=(t/p.tau)*Math.exp(1-t/p.tau);let v=0;for(const [f,a] of p.f)v+=a*Math.sin(2*Math.PI*f*t);
+    lp+=0.3*((Math.random()*2-1)-lp);d[i]+=p.amp*env*(v+0.4*lp)}}
+  let mx=0;for(let i=0;i<len;i++)mx=Math.max(mx,Math.abs(d[i]));for(let i=0;i<len;i++)d[i]/=mx||1;return b}
+function silentWavURL(){const sr=8000,n=sr/2,buf=new ArrayBuffer(44+n*2),v=new DataView(buf),w=(o,t)=>{for(let i=0;i<t.length;i++)v.setUint8(o+i,t.charCodeAt(i))};
+  w(0,'RIFF');v.setUint32(4,36+n*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,n*2,true);
+  return URL.createObjectURL(new Blob([buf],{type:'audio/wav'}))}
+function initAudio(){if(HB.ac)return true;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return false;
+  const ac=new AC();HB.ac=ac;
+  HB.master=ac.createGain();HB.master.gain.value=0;
+  const comp=ac.createDynamicsCompressor();comp.threshold.value=-20;comp.knee.value=12;comp.ratio.value=4;
+  HB.master.connect(comp);comp.connect(ac.destination);
+  const lpf=ac.createBiquadFilter();lpf.type='lowpass';lpf.frequency.value=1400;HB.valveG=ac.createGain();lpf.connect(HB.valveG);HB.valveG.connect(HB.master);HB.vIn=lpf;
+  // pink-ish noise loop for the flow whoosh
+  const nb=ac.createBuffer(1,ac.sampleRate*2,ac.sampleRate),d=nb.getChannelData(0);let b0=0,b1=0,b2=0;
+  for(let i=0;i<d.length;i++){const wn=Math.random()*2-1;b0=0.99765*b0+wn*0.099046;b1=0.963*b1+wn*0.2965164;b2=0.57*b2+wn*1.0526913;d[i]=(b0+b1+b2+wn*0.1848)*0.2}
+  const src=ac.createBufferSource();src.buffer=nb;src.loop=true;
+  HB.bp=ac.createBiquadFilter();HB.bp.type='bandpass';HB.bp.frequency.value=500;HB.bp.Q.value=0.8;
+  HB.flowG=ac.createGain();HB.flowG.gain.value=0;src.connect(HB.bp);HB.bp.connect(HB.flowG);HB.flowG.connect(HB.master);
+  HB.bp2=ac.createBiquadFilter();HB.bp2.type='bandpass';HB.bp2.frequency.value=1500;HB.bp2.Q.value=2.5;
+  HB.turbG=ac.createGain();HB.turbG.gain.value=0;src.connect(HB.bp2);HB.bp2.connect(HB.turbG);HB.turbG.connect(HB.master);
+  src.start();
+  const F1=[[90,0.8],[150,1],[240,0.7],[380,0.35]],F2=[[120,0.7],[200,1],[320,0.7],[480,0.35]];
+  HB.buf.S1=mkSound([{at:0,amp:1,tau:0.018,f:F1},{at:0.022,amp:0.7,tau:0.016,f:F1}]);
+  HB.buf.S2=mkSound([{at:0,amp:0.85,tau:0.012,f:F2},{at:0.012,amp:0.5,tau:0.011,f:F2}]);
+  HB.buf.S2s=mkSound([{at:0,amp:0.85,tau:0.012,f:F2},{at:0.05,amp:0.6,tau:0.011,f:F2}]);
+  HB.buf.S3=mkSound([{at:0,amp:0.6,tau:0.03,f:[[60,1],[95,0.8],[150,0.4]]}]);
+  HB.buf.S4=mkSound([{at:0,amp:0.6,tau:0.026,f:[[65,1],[105,0.8],[160,0.4]]}]);
+  return true}
+function play(name,when,vol){const ac=HB.ac,s=ac.createBufferSource(),g=ac.createGain();s.buffer=HB.buf[name];g.gain.value=vol;s.connect(g);g.connect(HB.vIn);s.start(Math.max(when,ac.currentTime))}
+function applyVol(){if(HB.master)HB.master.gain.setTargetAtTime(AU.on?AU.vol*1.6:0,HB.ac.currentTime,0.03)}
+function updSndUI(){
+  $$('.sndBtn').forEach(b=>{b.classList.toggle('on',AU.on);b.innerHTML=b.classList.contains('mini')?(AU.on?'&#128266;':'&#128263;'):(AU.on?'&#128266; Flow sound on: tap to mute':'&#128263; Muted: tap for flow sound')});
+  const st=!HB.ac?'Sound is off. Tap the Sound button (or the speaker icon) to start it.':
+    HB.ac.state!=='running'?`Audio is "${HB.ac.state}". Tap the Sound button again. On iPhone, turn up the volume and check the side ring/silent switch.`:
+    AU.on?'Flow sound playing.':'Muted.';
+  $$('.sndStat').forEach(e=>e.textContent=st)}
+function soundOn(){if(!initAudio()){$$('.sndStat').forEach(e=>e.textContent='This browser does not support Web Audio.');return}
+  const ac=HB.ac;
+  try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch(e){}
+  // iOS: a playing <audio> element moves the page into the "playback" session, so the ring/silent switch no longer mutes it
+  try{if(!HB.el){HB.el=new Audio(silentWavURL());HB.el.loop=true;HB.el.setAttribute('playsinline','')}HB.el.play().catch(()=>{})}catch(e){}
+  const pr=ac.resume();
+  {const b=ac.createBuffer(1,1,ac.sampleRate),s=ac.createBufferSource();s.buffer=b;s.connect(ac.destination);s.start(0)}  // unlock inside the tap
+  AU.on=true;applyVol();HB.sched=-1;
+  if(pr&&pr.then)pr.then(updSndUI,updSndUI);updSndUI();setTimeout(updSndUI,600)}
+function soundOff(){AU.on=false;applyVol();updSndUI()}
+$$('.sndBtn').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();AU.on?soundOff():soundOn()}));
+$('#vol').addEventListener('input',e=>{AU.vol=+e.target.value;applyVol()});
+$('#cFlow').addEventListener('change',e=>{AU.flow=e.target.checked});
+function scheduleSounds(cy){if(!AU.on||!AU.valves||!HB.ac||HB.ac.state!=='running')return;
+  const toNext=(1-(HB.phase%1))*cy.RR;if(toNext>0.15||HB.sched===cy.beat+1)return;HB.sched=cy.beat+1;
+  const t0=HB.ac.currentTime+toNext,s2=sysT(cy.RR),m=HB.mode;
+  if(m==='s4')play('S4',t0-0.09,1.2);
+  play('S1',t0+0.04,1);play(m==='split'?'S2s':'S2',t0+s2,0.85);
+  if(m==='s3')play('S3',t0+s2+0.15,1.2)}
+function updateFlowAudio(cy){if(!HB.ac)return;const t=HB.ac.currentTime,inTun=TUN.visible&&TUN.data;
+  const side=inTun?(TUN.mode==='RCA'?'R':'L'):S.art;
+  const f=side==='R'?flowR(cy.ts,cy.RR):side==='L'?flowL(cy.ts,cy.RR):(flowL(cy.ts,cy.RR)+flowR(cy.ts,cy.RR))/2;
+  const turb=inTun?TUN.turb:0;
+  HB.flowG.gain.setTargetAtTime(AU.flow?(inTun?0.9:0.35)*f*(1+turb):0,t,0.025);
+  HB.bp.frequency.setTargetAtTime(260+620*f+turb*700,t,0.03);
+  HB.turbG.gain.setTargetAtTime(AU.flow?turb*f*0.9:0,t,0.03)}
+function drawECG(cy,dtMs){const c=$('#ecg'),dpr=Math.min(window.devicePixelRatio||1,2),w=Math.round(c.clientWidth*dpr),h=Math.round(c.clientHeight*dpr);
+  if(!w)return;if(c.width!==w||c.height!==h||!HB.cols){c.width=w;c.height=h;HB.cols=new Float32Array(w).fill(NaN);HB.lastX=-1}
+  HB.clock+=dtMs/1000;const x=c.getContext('2d'),SWEEP=4,pxs=w/SWEEP,xNow=Math.floor((HB.clock%SWEEP)*pxs);
+  let n=HB.lastX<0?1:(xNow-HB.lastX+w)%w;if(n>w/2)n=1;
+  for(let k=n-1;k>=0;k--){const xi=(xNow-k+w)%w,back=k/pxs;let ts=cy.ts-back;while(ts<0)ts+=cy.RR;HB.cols[xi]=ecgV(ts,cy.RR);for(let g=1;g<=Math.round(10*dpr);g++)HB.cols[(xi+g)%w]=NaN}
+  HB.lastX=xNow;
+  x.fillStyle='#050807';x.fillRect(0,0,w,h);x.strokeStyle='#0f2418';x.lineWidth=1;
+  for(let gx=0;gx<w;gx+=pxs*0.2){x.beginPath();x.moveTo(gx,0);x.lineTo(gx,h);x.stroke()}
+  x.strokeStyle='#4cd98a';x.lineWidth=1.6*dpr;x.lineJoin='round';x.beginPath();let pen=false;const Y=v=>h*0.72-v*h*0.6;
+  for(let i=0;i<w;i++){const v=HB.cols[i];if(isNaN(v)){pen=false;continue}pen?x.lineTo(i,Y(v)):x.moveTo(i,Y(v));pen=true}x.stroke();
+  const s2=sysT(cy.RR),mk=(dt,t)=>{const back=cy.ts-dt;if(back<0||back>1.2)return;const xi=xNow-back*pxs;
+    x.fillStyle='rgba(240,160,48,'+(1-back/1.2)+')';x.font=`600 ${Math.round(10*dpr)}px ui-monospace,Menlo,monospace`;x.fillText(t,xi-6*dpr,12*dpr)};
+  x.fillStyle='#4cd98a';x.beginPath();x.arc(xNow,Y(HB.cols[xNow]||0),2.5*dpr,0,7);x.fill()}
+$$('#sndSeg button').forEach(b=>b.onclick=()=>{HB.mode=b.dataset.s;$$('#sndSeg button').forEach(x=>x.classList.toggle('on',x===b));
+  $('#sndNote').textContent=({normal:'S1 ("lub") follows the QRS as the mitral and tricuspid valves close; S2 ("dub") comes at the end of the T wave as the aortic and pulmonary valves close. The whoosh is coronary blood flow: in the left coronary it surges in diastole.',
+   split:'Split S2: A2 then P2 about 50 ms apart, as heard normally on inspiration (wider in RBBB, ASD).',
+   s3:'S3: low-pitched early-diastolic sound ~150 ms after S2 during rapid filling ("Ken-tuck-y"). Normal in the young; in adults suggests heart failure/volume overload.',
+   s4:'S4: low-pitched late-diastolic sound just before S1, from atrial contraction into a stiff ventricle ("Ten-nes-see"). Never with AF.'})[HB.mode]});
+document.addEventListener('visibilitychange',()=>{if(!HB.ac)return;if(document.hidden)HB.ac.suspend();else if(AU.on)HB.ac.resume().then(updSndUI)});
+updSndUI();
+
+/* ---------- inside the artery: intraluminal fly-through ---------- */
+const TUN={mode:'RCA',play:true,spd:6,sten:false,s:1,yaw:0,pitch:0,drag:false,visible:false,R:null,data:null,turb:0};
+const CHAINS={RCA:['pRCA','mRCA','dRCA','PDA'],LM:['LM','pLAD'],LAD:['LM','pLAD','mLAD','aLAD'],LCx:['LM','pLCx','dLCx','PDA']};
+const STENAT={RCA:'mRCA',LM:'LM',LAD:'mLAD',LCx:'dLCx'};
+const TUNNOTE={RCA:'RCA: from the right coronary ostium along the AV groove (conus, SA nodal, RV and acute marginal ostia on the way) to the crux and PDA. Flow is fairly even through the cycle because the thin RV squeezes it less.',
+  LM:'Left main: a short, wide trunk from the left aortic sinus. Watch for the bifurcation: the LCx ostium opens to one side while you carry on into the LAD.',
+  LAD:'LAD: down the anterior interventricular groove. Diagonal ostia open on the epicardial side, septal ostia dive into the septum. Notice how flow surges in diastole.',
+  LCx:'LCx: from the left main bifurcation around the AV groove, with obtuse marginal ostia toward the lateral wall.'};
+function chainFor(mode){const out=[];for(const id of CHAINS[mode]){const v=vById(id);if(!v)break;if(out.length&&v.from!==out[out.length-1].id)break;out.push(v)}return out}
+function endoTex(){const c=document.createElement('canvas');c.width=256;c.height=512;const x=c.getContext('2d');
+  x.fillStyle='#d9d2d2';x.fillRect(0,0,256,512);
+  for(let i=0;i<70;i++){const X=Math.random()*256;x.strokeStyle=`rgba(${Math.random()<0.5?'255,255,255':'90,60,60'},${0.08+Math.random()*0.12})`;x.lineWidth=1+Math.random()*3;
+    x.beginPath();x.moveTo(X,0);for(let y=0;y<=512;y+=32)x.lineTo(X+Math.sin(y/60+i)*3,y);x.stroke()}
+  for(let i=0;i<500;i++){x.fillStyle=`rgba(120,80,80,${0.08+Math.random()*0.12})`;x.beginPath();x.ellipse(Math.random()*256,Math.random()*512,2+Math.random()*2,6+Math.random()*6,0,0,7);x.fill()}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t}
+function holeTex(){const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d'),g=x.createRadialGradient(64,64,0,64,64,64);
+  g.addColorStop(0,'rgba(4,0,1,1)');g.addColorStop(0.55,'rgba(25,2,5,0.95)');g.addColorStop(0.8,'rgba(70,8,12,0.6)');g.addColorStop(1,'rgba(120,20,25,0)');
+  x.fillStyle=g;x.fillRect(0,0,128,128);return new THREE.CanvasTexture(c)}
+function initTunnel(){
+  const host=$('#tunHost'),renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.setClearColor(0x120103);
+  host.insertBefore(renderer.domElement,host.firstChild);
+  const scene=new THREE.Scene();scene.fog=new THREE.Fog(0x120103,3,26);
+  const camera=new THREE.PerspectiveCamera(72,1,0.02,80);scene.add(camera);
+  const lamp=new THREE.PointLight(0xfff0ea,2.0,30,1.5);camera.add(lamp);scene.add(new THREE.AmbientLight(0xffffff,0.12));
+  const wallMat=new THREE.MeshStandardMaterial({map:endoTex(),vertexColors:true,side:THREE.DoubleSide,roughness:0.42,metalness:0,emissive:0x1a0204});
+  const wall=new THREE.Mesh(new THREE.BufferGeometry(),wallMat);wall.frustumCulled=false;scene.add(wall);
+  const NC=260,cells=new THREE.InstancedMesh(new THREE.SphereGeometry(1,12,8),new THREE.MeshStandardMaterial({color:0x9a1018,roughness:0.45,emissive:0x1a0002}),NC);
+  cells.frustumCulled=false;scene.add(cells);
+  const holeMat=new THREE.MeshBasicMaterial({map:holeTex(),transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,side:THREE.DoubleSide});
+  const holeG=new THREE.Group();scene.add(holeG);
+  TUN.R={renderer,scene,camera,wall,cells,NC,holeMat,holeG,cell:[]};
+  for(let i=0;i<NC;i++)TUN.R.cell.push({s:0,a:Math.random()*6.283,r:Math.sqrt(Math.random())*0.85,q:new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.random()*6,Math.random()*6,0)),sp:(Math.random()-0.5)*4});
+  new ResizeObserver(()=>{const r=host.getBoundingClientRect();if(r.width<10)return;renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix();
+    const lc=$('#tunLab'),d=Math.min(window.devicePixelRatio||1,2);lc.width=r.width*d;lc.height=r.height*d}).observe(host);
+  buildTunnel()}
+function buildTunnel(){if(!TUN.R)return;const ch=chainFor(TUN.mode);if(!ch.length){TUN.data=null;return}
+  const P=[],rad=[],seg=[];ch.forEach((v,ci)=>v.pts.forEach((p,k)=>{if(ci>0&&k===0)return;P.push([-p[0]*10,p[1]*10,p[2]*10]);rad.push(v.w/2);seg.push(ci)}));
+  if(TUN.mode==='LM'){const keep=ch[0].pts.length+Math.floor((ch[1].pts.length-1)*0.55);P.length=rad.length=seg.length=Math.min(P.length,keep)}
+  // smooth kinks (e.g. ostium -> groove) so the lumen never folds over itself on a tight bend
+  for(let it=0;it<10;it++){const Q=P.map(p=>p.slice());for(let i=1;i<P.length-1;i++)for(let c=0;c<3;c++)Q[i][c]=(P[i-1][c]+2*P[i][c]+P[i+1][c])/4;for(let i=0;i<P.length;i++)P[i]=Q[i]}
+  const cum=[0];for(let i=1;i<P.length;i++)cum.push(cum[i-1]+Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1],P[i][2]-P[i-1][2]));
+  const Lp=cum[cum.length-1],curve=new THREE.CatmullRomCurve3(P.map(p=>new THREE.Vector3(...p)),false,'centripetal'),L=curve.getLength();
+  const N=Math.max(60,Math.ceil(L/0.25)),fr=curve.computeFrenetFrames(N,false),RS=28;
+  const D={N,L,RS,C:[],T:fr.tangents,Nn:fr.normals,Bn:fr.binormals,Rr:[],Sg:[],Ss:[],ch,holes:[],sc:null};
+  let k=0;for(let i=0;i<=N;i++){const u=i/N,sp=u*Lp;D.C.push(curve.getPointAt(u));D.Ss.push(u*L);
+    while(k<cum.length-2&&cum[k+1]<sp)k++;const f=clamp((sp-cum[k])/Math.max(1e-6,cum[k+1]-cum[k]),0,1);D.Rr.push(rad[k]+(rad[k+1]-rad[k])*f);D.Sg.push(seg[f<0.5?k:k+1])}
+  // stenosis in the middle of the chosen segment
+  const si=ch.findIndex(v=>v.id===STENAT[TUN.mode]);if(si>=0){const idx=[];D.Sg.forEach((g,i)=>{if(g===si)idx.push(i)});if(idx.length)D.sc=D.Ss[idx[Math.floor(idx.length*(TUN.mode==='LM'?0.7:0.5))]]}
+  // geometry
+  const nv=(N+1)*(RS+1),g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(nv*3),3));g.setAttribute('normal',new THREE.BufferAttribute(new Float32Array(nv*3),3));
+  g.setAttribute('color',new THREE.BufferAttribute(new Float32Array(nv*3),3));
+  const uv=new Float32Array(nv*2),idx=[];
+  for(let i=0;i<=N;i++)for(let j=0;j<=RS;j++){const q=i*(RS+1)+j;uv[q*2]=j/RS*3;uv[q*2+1]=D.Ss[i]/5;
+    if(i<N&&j<RS){const a=q,b=q+1,c=q+RS+1,d=q+RS+2;idx.push(a,c,b,b,c,d)}}
+  g.setAttribute('uv',new THREE.BufferAttribute(uv,2));g.setIndex(idx);
+  TUN.R.wall.geometry.dispose();TUN.R.wall.geometry=g;
+  // branch ostia
+  for(const h of [...TUN.R.holeG.children]){h.geometry.dispose();TUN.R.holeG.remove(h)}
+  const ids=ch.map(v=>v.id);
+  for(const b of VES){if(!ids.includes(b.from)||ids.includes(b.id))continue;
+    const A=new THREE.Vector3(-b.pts[0][0]*10,b.pts[0][1]*10,b.pts[0][2]*10);let bi=0,bd=1e9;D.C.forEach((c,i)=>{const d=c.distanceToSquared(A);if(d<bd){bd=d;bi=i}});
+    if(bd>36)continue;
+    const q=b.pts[Math.min(4,b.pts.length-1)],dir=new THREE.Vector3(-q[0]*10,q[1]*10,q[2]*10).sub(A).normalize(),T=D.T[bi];
+    const dp=dir.clone().addScaledVector(T,-dir.dot(T));if(dp.lengthSq()<1e-4)dp.copy(D.Nn[bi]);dp.normalize();
+    const m=new THREE.Mesh(new THREE.CircleGeometry(1,32),TUN.R.holeMat),z=dp.clone().negate(),y=T.clone(),x=new THREE.Vector3().crossVectors(y,z);
+    m.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x,y,z));
+    const rb=Math.min(b.w/2,D.Rr[bi]*0.85);m.scale.set(rb*1.5,rb*2.1,1);m.position.copy(D.C[bi]).addScaledVector(dp,D.Rr[bi]*0.94);
+    TUN.R.holeG.add(m);D.holes.push({s:D.Ss[bi],id:b.id,name:b.name,mesh:m})}
+  D.holes.sort((a,b)=>a.s-b.s);
+  TUN.data=D;TUN.s=Math.min(TUN.s,L-4);if(TUN.s<0.5)TUN.s=0.5;
+  for(const c of TUN.R.cell)c.s=TUN.s-3+Math.random()*28;
+  $('#tunNote').textContent=TUNNOTE[TUN.mode]+' Drag to look around; tap to pause. Dark holes in the wall are branch ostia.'}
+function tAt(s){const D=TUN.data,x=clamp(s/D.L*D.N,0,D.N-1e-6),i=Math.floor(x);return {i,f:x-i}}
+const _v1=new THREE.Vector3(),_v2=new THREE.Vector3();
+function lerpV(arr,s,out){const {i,f}=tAt(s);return out.copy(arr[i]).lerp(arr[i+1],f)}
+function radAt(s){const {i,f}=tAt(s),D=TUN.data;return D.Rr[i]+(D.Rr[i+1]-D.Rr[i])*f}
+const stenB=s=>TUN.sten&&TUN.data.sc!=null?Math.exp(-Math.pow((s-TUN.data.sc)/2.4,2)):0;
+function renderTunnel(dtMs,cy){
+  if(!TUN.R||!TUN.visible||!TUN.data)return;const D=TUN.data,R=TUN.R,dt=dtMs/1000,side=TUN.mode==='RCA'?'R':'L';
+  const flow=side==='R'?flowR(cy.ts,cy.RR):flowL(cy.ts,cy.RR),pulse=1+0.045*pressure(cy.ts,cy.RR);
+  if(TUN.play){TUN.s+=TUN.spd*dt;if(TUN.s>D.L-3)TUN.s=0.5}
+  if(!TUN.drag){TUN.yaw*=0.94;TUN.pitch*=0.94}
+  // wall (pulsatile radius, optional eccentric plaque)
+  const pos=R.wall.geometry.attributes.position.array,nor=R.wall.geometry.attributes.normal.array,col=R.wall.geometry.attributes.color.array,RS=D.RS;
+  for(let i=0;i<=D.N;i++){const C=D.C[i],Nv=D.Nn[i],Bv=D.Bn[i],b=stenB(D.Ss[i]),r0=D.Rr[i]*pulse;
+    for(let j=0;j<=RS;j++){const a=j/RS*6.2832,ca=Math.cos(a),sa=Math.sin(a),ecc=b*(0.55+0.45*ca),r=r0*(1-0.62*ecc),q=(i*(RS+1)+j)*3;
+      const nx=Nv.x*ca+Bv.x*sa,ny=Nv.y*ca+Bv.y*sa,nz=Nv.z*ca+Bv.z*sa;
+      pos[q]=C.x+nx*r;pos[q+1]=C.y+ny*r;pos[q+2]=C.z+nz*r;nor[q]=-nx;nor[q+1]=-ny;nor[q+2]=-nz;
+      col[q]=0.7+0.25*ecc;col[q+1]=0.2+0.6*ecc;col[q+2]=0.23+0.15*ecc}}
+  R.wall.geometry.attributes.position.needsUpdate=true;R.wall.geometry.attributes.normal.needsUpdate=true;R.wall.geometry.attributes.color.needsUpdate=true;
+  // camera rides the centreline
+  const cam=R.camera,cp=lerpV(D.C,TUN.s,new THREE.Vector3()),ahead=lerpV(D.C,Math.min(D.L,TUN.s+3),new THREE.Vector3()),up=lerpV(D.Nn,TUN.s,new THREE.Vector3()).normalize();
+  const fwd=ahead.sub(cp).normalize(),right=new THREE.Vector3().crossVectors(fwd,up).normalize();
+  fwd.applyAxisAngle(up,-TUN.yaw).applyAxisAngle(right,TUN.pitch);
+  cam.position.copy(cp);cam.up.copy(up);cam.lookAt(cp.clone().add(fwd));
+  // red cells: parabolic flow profile, pulsatile, faster through a stenosis
+  const m4=new THREE.Matrix4(),sc=new THREE.Vector3(),pp=new THREE.Vector3(),Nv=new THREE.Vector3(),Bv=new THREE.Vector3(),qq=new THREE.Quaternion(),ax=new THREE.Vector3(0,0,1);
+  R.cell.forEach((c,k)=>{const b=stenB(c.s),narrow=1-0.62*b*0.75;
+    c.s+=(TUN.spd*(TUN.play?1:0)+(4+16*flow)*(1-c.r*c.r)/(narrow*narrow))*dt;
+    if(c.s>TUN.s+26||c.s>D.L-0.3)c.s=TUN.s-2.5*Math.random();if(c.s<TUN.s-4)c.s=TUN.s+Math.random()*26;if(c.s<0.2)c.s=0.2+Math.random()*2;
+    lerpV(D.C,c.s,pp);lerpV(D.Nn,c.s,Nv);lerpV(D.Bn,c.s,Bv);const rr=radAt(c.s)*narrow*pulse*c.r;
+    pp.addScaledVector(Nv,Math.cos(c.a)*rr).addScaledVector(Bv,Math.sin(c.a)*rr);
+    c.q.multiply(qq.setFromAxisAngle(ax,c.sp*dt));sc.set(0.11,0.11,0.04);m4.compose(pp,c.q,sc);R.cells.setMatrixAt(k,m4)});
+  R.cells.instanceMatrix.needsUpdate=true;
+  R.renderer.render(R.scene,cam);
+  // HUD
+  const segI=D.Sg[tAt(TUN.s).i],sv=D.ch[segI],bHere=stenB(TUN.s),lum=2*radAt(TUN.s)*pulse*(1-0.62*bHere*0.55);
+  TUN.turb=TUN.sten&&D.sc!=null?Math.exp(-Math.pow((TUN.s-D.sc)/6,2)):0;
+  $('#tunTL').textContent=sv?sv.name:'';$('#tunTR').textContent=`${Math.round(TUN.s)} / ${Math.round(D.L)} mm · Ø ${lum.toFixed(1)} mm`;
+  const nxt=D.holes.find(h=>h.s>TUN.s+0.5),sten=TUN.sten&&D.sc!=null&&D.sc>TUN.s&&D.sc-TUN.s<20;
+  $('#tunBL').textContent=sten?`Stenosis ahead in ${Math.round(D.sc-TUN.s)} mm: ~60% narrowing (listen for the turbulent bruit)`:nxt?`${nxt.name} ostium in ${Math.round(nxt.s-TUN.s)} mm`:'';
+  $('#tunPos').value=Math.round(TUN.s/D.L*1000);
+  const lc=$('#tunLab'),x=lc.getContext('2d'),d=lc.width/Math.max(1,lc.clientWidth);x.clearRect(0,0,lc.width,lc.height);
+  x.font=`600 ${Math.round(12*d)}px ui-monospace,Menlo,monospace`;x.textBaseline='middle';x.lineJoin='round';
+  for(const h of D.holes){const ds=h.s-TUN.s;if(ds<0.5||ds>14)continue;const p=h.mesh.position.clone().project(cam);if(p.z>1||Math.abs(p.x)>1.1||Math.abs(p.y)>1.1)continue;
+    const sx=(p.x+1)/2*lc.width,sy=(1-p.y)/2*lc.height;x.globalAlpha=clamp((14-ds)/6,0,1);x.lineWidth=3*d;x.strokeStyle='rgba(0,0,0,.85)';x.strokeText(h.id,sx+6*d,sy);x.fillStyle='#ffcf7a';x.fillText(h.id,sx+6*d,sy)}
+  x.globalAlpha=1}
+// controls
+$$('#tunSeg button').forEach(b=>b.onclick=()=>{TUN.mode=b.dataset.t;$$('#tunSeg button').forEach(x=>x.classList.toggle('on',x===b));TUN.s=0.5;buildTunnel()});
+$('#tunPlay').onclick=()=>{TUN.play=!TUN.play;$('#tunPlay').classList.toggle('on',TUN.play);$('#tunPlay').textContent=TUN.play?'Pause':'Play'};
+$('#tunSten').onclick=()=>{TUN.sten=!TUN.sten;$('#tunSten').classList.toggle('on',TUN.sten);if(TUN.sten&&TUN.data&&TUN.data.sc!=null)TUN.s=Math.max(0.5,TUN.data.sc-18)};
+$('#tunRestart').onclick=()=>{TUN.s=0.5;if(TUN.data)for(const c of TUN.R.cell)c.s=TUN.s-3+Math.random()*28};
+$('#tunSpd').addEventListener('input',e=>TUN.spd=+e.target.value);
+$('#tunPos').addEventListener('input',e=>{if(TUN.data){TUN.s=clamp(+e.target.value/1000*TUN.data.L,0.5,TUN.data.L-3);for(const c of TUN.R.cell)c.s=TUN.s-3+Math.random()*28}});
+{const el=$('#tunHost');let g=null;
+  el.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;el.setPointerCapture(e.pointerId);g={x:e.clientX,y:e.clientY,sx:e.clientX,sy:e.clientY,moved:false};TUN.drag=true});
+  el.addEventListener('pointermove',e=>{if(!g)return;const dx=e.clientX-g.x,dy=e.clientY-g.y;g.x=e.clientX;g.y=e.clientY;if(Math.hypot(e.clientX-g.sx,e.clientY-g.sy)>6)g.moved=true;
+    TUN.yaw=clamp(TUN.yaw+dx*0.006,-1.2,1.2);TUN.pitch=clamp(TUN.pitch-dy*0.006,-1,1)});
+  const up=()=>{if(g&&!g.moved)$('#tunPlay').click();g=null;TUN.drag=false};el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up)}
+if(HAS3&&'IntersectionObserver' in window){new IntersectionObserver(es=>{for(const e of es){TUN.visible=e.isIntersecting;
+  if(TUN.visible&&!TUN.R){try{initTunnel()}catch(err){console.error(err);$('#tunNo').hidden=false;$('#tunNo').textContent='The fly-through could not start on this device ('+err.message+').'}}}},{threshold:0.15}).observe($('#tunHost'))}
+else $('#tunNo').hidden=false;
+window.addEventListener('resize',()=>{dirty=true;roomDirty=true});
+
+build();presetsHTML();setScore();
+if(HAS3){try{init3D();initRoom()}catch(err){console.error(err);R3=null;RM=null;$('#nogl').hidden=false;$('#nogl').textContent='3D could not start on this device ('+err.message+').'}}
+else{$('#nogl').hidden=false;$('#roomHost').innerHTML='<div class="nogl">Room view needs Three.js (internet on first load).</div>'}
+setBig(R3?'3d':'ang');
+
+function loop(now){
+  const dtMs=HB.last==null?16:Math.min(500,now-HB.last);HB.last=now;const cy=cardiac(dtMs);
+  if(S.tw){const k=Math.min(1,(now-S.tw.t0)/500),e=k<0.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
+    S.rot=S.tw.f[0]+(S.tw.to[0]-S.tw.f[0])*e;S.ang=S.tw.f[1]+(S.tw.to[1]-S.tw.f[1])*e;if(k>=1){S.rot=S.tw.to[0];S.ang=S.tw.to[1];S.tw=null}invalidate()}
+  if(dirty){dirty=false;updateUI()}
+  const t=now/1000,cine={m:1,fill:1,fade:1};
+  if(S.cine){cine.m=1-0.04*contraction(cy.ts,cy.RR);const T=3.4,ph=t%T;if(ph<1.4)cine.fill=Math.pow(ph/1.4,0.85);else if(ph>2.8)cine.fade=1-(ph-2.8)/0.6;$('#ovCine').textContent='CINE '+ph.toFixed(1)+' s'}
+  else $('#ovCine').textContent='STILL';
+  render2D(cine);render3D(cine);updateFlowAudio(cy);renderTunnel(dtMs,cy);
+  if(roomDirty){roomDirty=false;renderRoom()}
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
