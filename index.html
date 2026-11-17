@@ -317,10 +317,10 @@ const B=[-0.5,-0.5,2.5],H=8.5;
 const W=norm([5.5,3.5,-6]);                       // base -> apex
 const U=norm(sub([0,1,0],sc(W,dot([0,1,0],W))));  // anterior wall
 const V=cross(W,U);                               // obtuse (left) margin
-function rad(t){t=clamp(t,0,1.02);return 0.6+3.7*Math.sqrt(Math.max(0,1-Math.pow(t,2.2)))}
+function rad(t){t=clamp(t,0,1.04);return 0.15+4.15*Math.sqrt(Math.max(0,1-Math.pow(t/1.04,2.2)))}  // smooth, rounded apex
 function surf(t,th,k){const a=th*D2R,r=rad(t)*(k==null?1:k);return add(add(B,sc(W,t*H)),add(sc(U,Math.cos(a)*r),sc(V,Math.sin(a)*r)))}
 function meshR(t){if(t<0)return rad(0)*0.95*Math.sqrt(Math.max(0,1-Math.pow(t/0.26,2)));
-  if(t>1)return 0.57*Math.sqrt(Math.max(0,1-Math.pow((t-1)/0.12,2)));return rad(t)*0.95}
+  if(t>=1.04)return 0;return rad(t)*0.95}
 const C0=add(B,sc(W,H*0.47));
 const LOST=add(add(add(B,sc(U,1.6)),sc(V,1.2)),sc(W,-0.3));
 const ROST=add(add(add(B,sc(U,2.2)),sc(V,-0.9)),sc(W,-0.3));
@@ -566,7 +566,7 @@ const toW=p=>new THREE.Vector3(-p[0],p[1],p[2]);  // patient (left-handed) -> wo
 function tube(pts,r,mat,seg){return new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map(toW)),seg||48,r,12,false),mat)}
 function ell(p,s,mat){const m=new THREE.Mesh(new THREE.SphereGeometry(1,28,18),mat);m.position.copy(toW(p));m.scale.set(s[0],s[1],s[2]);return m}
 function heartGeo(){
-  const ts=[];for(let i=0;i<=14;i++)ts.push(-0.26+0.26*i/14);for(let i=1;i<=50;i++)ts.push(i/50);for(let i=1;i<=8;i++)ts.push(1+0.12*i/8);
+  const ts=[];for(let i=0;i<=14;i++)ts.push(-0.26+0.26*i/14);for(let i=1;i<=50;i++)ts.push(i/50);for(let i=1;i<=6;i++)ts.push(1+0.04*i/6);
   const nTh=48,pos=[],idx=[];
   for(const t of ts){const r=meshR(t),c=add(B,sc(W,t*H));for(let j=0;j<nTh;j++){const a=j/nTh*2*Math.PI,p=add(c,add(sc(U,Math.cos(a)*r),sc(V,Math.sin(a)*r)));pos.push(-p[0],p[1],p[2])}}
   for(let i=0;i<ts.length-1;i++)for(let j=0;j<nTh;j++){const a=i*nTh+j,b=i*nTh+(j+1)%nTh,c=(i+1)*nTh+j,d=(i+1)*nTh+(j+1)%nTh;idx.push(a,c,b,b,c,d)}
